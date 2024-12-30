@@ -633,11 +633,76 @@ class Game {
                     snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
                     snow.y -= diagonalSpeed;  // Keep original speed for snow
                 }
-                // ... rest of snowflake update code ...
+                
+                // Reset snowflake when it goes off screen
+                if (snow.y < -10) {
+                    // If goes off top, reset to bottom
+                    snow.y = this.canvas.height + 10;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 10) {
+                    // If goes off bottom, reset to top
+                    snow.y = -10;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                
+                // Reset if goes off sides
+                if (snow.x < -10) {
+                    snow.x = this.canvas.width + 10;
+                } else if (snow.x > this.canvas.width + 10) {
+                    snow.x = -10;
+                }
             });
             
             // Do the same for large and extra-large snowflakes
-            // ... rest of update code ...
+            this.largeSnowflakes.forEach(snow => {
+                const diagonalSpeed = snow.speed;
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * diagonalSpeed;
+                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;
+                } else {
+                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
+                    snow.y -= diagonalSpeed;
+                }
+                
+                // Reset large snowflake when it goes off screen
+                if (snow.y < -20) {
+                    snow.y = this.canvas.height + 20;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 20) {
+                    snow.y = -20;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                if (snow.x < -20) {
+                    snow.x = this.canvas.width + 20;
+                } else if (snow.x > this.canvas.width + 20) {
+                    snow.x = -20;
+                }
+            });
+
+            this.extraLargeSnowflakes.forEach(snow => {
+                const diagonalSpeed = snow.speed;
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * diagonalSpeed;
+                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;
+                } else {
+                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
+                    snow.y -= diagonalSpeed;
+                }
+                
+                // Reset extra-large snowflake when it goes off screen
+                if (snow.y < -30) {
+                    snow.y = this.canvas.height + 30;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 30) {
+                    snow.y = -30;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                if (snow.x < -30) {
+                    snow.x = this.canvas.width + 30;
+                } else if (snow.x > this.canvas.width + 30) {
+                    snow.x = -30;
+                }
+            });
             
             // Check if we need to add more trees based on time
             const currentMultiplier = this.getTreeMultiplier();
@@ -701,56 +766,6 @@ class Game {
                 
                 // Remove confetti that's fallen off screen
                 return conf.y < this.canvas.height + 20;
-            });
-
-            // Update large snowflakes
-            this.largeSnowflakes.forEach(snow => {
-                const diagonalSpeed = snow.speed;
-                if (this.easyMode) {
-                    snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed;
-                } else {
-                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
-                    snow.y -= diagonalSpeed;
-                }
-                
-                if (snow.y < -20) {
-                    snow.y = this.canvas.height + 20;
-                    snow.x = Math.random() * this.canvas.width;
-                } else if (snow.y > this.canvas.height + 20) {
-                    snow.y = -20;
-                    snow.x = Math.random() * this.canvas.width;
-                }
-                if (snow.x < -20) {
-                    snow.x = this.canvas.width + 20;
-                } else if (snow.x > this.canvas.width + 20) {
-                    snow.x = -20;
-                }
-            });
-
-            // Update extra-large snowflakes
-            this.extraLargeSnowflakes.forEach(snow => {
-                const diagonalSpeed = snow.speed;
-                if (this.easyMode) {
-                    snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed;
-                } else {
-                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
-                    snow.y -= diagonalSpeed;
-                }
-                
-                if (snow.y < -30) {
-                    snow.y = this.canvas.height + 30;
-                    snow.x = Math.random() * this.canvas.width;
-                } else if (snow.y > this.canvas.height + 30) {
-                    snow.y = -30;
-                    snow.x = Math.random() * this.canvas.width;
-                }
-                if (snow.x < -30) {
-                    snow.x = this.canvas.width + 30;
-                } else if (snow.x > this.canvas.width + 30) {
-                    snow.x = -30;
-                }
             });
         }
     }
@@ -957,7 +972,7 @@ class Game {
             this.ctx.font = '16px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'bottom';
-            this.ctx.fillText('v1.0', 10, this.canvas.height - 10);  // 10px padding from edges
+            this.ctx.fillText('v1.1', 10, this.canvas.height - 10);  // Changed from v1.0 to v1.1
             this.ctx.restore();
         } else {
             // Draw trees with conditional fade effect
@@ -1159,9 +1174,25 @@ class Game {
                 }
             }
             
-            // Draw snowflakes with lighter opacity
+            // Draw regular snowflakes
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
             this.snowflakes.forEach(snow => {
+                this.ctx.beginPath();
+                this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+
+            // Draw large snowflakes
+            this.largeSnowflakes.forEach(snow => {
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${snow.opacity})`;
+                this.ctx.beginPath();
+                this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+
+            // Draw extra-large snowflakes
+            this.extraLargeSnowflakes.forEach(snow => {
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${snow.opacity})`;
                 this.ctx.beginPath();
                 this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
                 this.ctx.fill();
@@ -1263,15 +1294,14 @@ class Game {
     }
     
     createSnowflake(forceTop = false) {
-        // If forceTop is true, create at top of screen, otherwise random position
+        // Regular (small) snowflakes - slowest
         return {
             x: Math.random() * this.canvas.width,
             y: forceTop ? -10 : Math.random() * this.canvas.height,
-            size: Math.random() * 2 + 1,
-            // Slower speed if in intro screen
+            size: Math.random() * 2 + 1,  // Size range: 1-3 pixels
             speed: this.isIntroScreen ? 
-                Math.random() * 0.5 + 0.5 :  // Speed range 0.5-1 for intro
-                Math.random() * 1.5 + 2      // Speed range 2-3.5 for game
+                Math.random() * 0.5 + 0.5 :    // Intro speed: 0.5-1
+                Math.random() * 1.5 + 2      // Game speed: 2-3.5
         };
     }
 
@@ -1312,22 +1342,24 @@ class Game {
     }
 
     createLargeSnowflake(forceTop = false) {
+        // Large snowflakes - faster
         return {
             x: Math.random() * this.canvas.width,
             y: forceTop ? -20 : Math.random() * this.canvas.height,
-            size: Math.random() * 5 + 4,  // Size range 4-9 pixels
-            speed: Math.random() * 2 + 3,  // Changed: Much faster (3-5 speed range)
-            opacity: Math.random() * 0.3 + 0.2  // More transparent
+            size: Math.random() * 5 + 4,    // Size range: 4-9 pixels
+            speed: Math.random() * 2 + 4,   // Changed: Speed range 4-6 (faster)
+            opacity: Math.random() * 0.3 + 0.2
         };
     }
 
     createExtraLargeSnowflake(forceTop = false) {
+        // Extra large snowflakes - fastest
         return {
             x: Math.random() * this.canvas.width,
             y: forceTop ? -30 : Math.random() * this.canvas.height,
-            size: Math.random() * 8 + 8,  // Size range 8-16 pixels
-            speed: Math.random() * 3 + 5,  // Speed range 5-8
-            opacity: Math.random() * 0.2 + 0.1  // Very transparent
+            size: Math.random() * 8 + 8,    // Size range: 8-16 pixels
+            speed: Math.random() * 3 + 6,   // Changed: Speed range 6-9 (much faster)
+            opacity: Math.random() * 0.2 + 0.1
         };
     }
 
