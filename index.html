@@ -18,7 +18,9 @@
             }
         });
     </script>
-    <script src="game.js"></script>
+    <script>
+        document.write('<script src="game.js?v=' + GAME_VERSION + '"><\/script>');
+    </script>
     <style>
         * {
             user-select: none;
