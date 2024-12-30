@@ -132,6 +132,10 @@ class Game {
         this.restartSound = new Audio('Juicy Wooden Click.wav');
         this.restartSound.volume = 1.0;  // Changed from 0.25 to 1.0
 
+        // Setup highscore applause sound
+        this.highscoreApplauseSound = new Audio('Cheer Clapping Small Group In Theater Applause sound effect.mp3');
+        this.highscoreApplauseSound.volume = 0.25;
+
         // Setup crowd cheering sounds
         this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf_01.mp3');
         this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf_01.mp3');
@@ -875,6 +879,9 @@ class Game {
                         const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
                         if (this.currentScore > storedHighScore) {
                             localStorage.setItem('highScore', this.currentScore.toString());
+                            // Play highscore applause sound
+                            this.highscoreApplauseSound.currentTime = 0;
+                            this.highscoreApplauseSound.play();
                         }
                         
                         // Stop all skiing sounds immediately
@@ -1339,6 +1346,40 @@ class Game {
                 const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
                 this.ctx.fillText(`${storedHighScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 150);
                 
+                // Draw "New Highscore!" text if we just set a record
+                if (this.currentScore === storedHighScore) {
+                    const pulseSpeed = 1.5;
+                    const pulseAmount = 0.05;
+                    const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
+                    
+                    // Calculate safe position:
+                    // Font size is 24px
+                    // Maximum scale is 1.05 (1 + pulseAmount)
+                    // Text height is roughly 1.2x font size
+                    // Add 10% margin for safety
+                    const textHeight = 24 * 1.2;  // Base text height
+                    const maxScaledHeight = textHeight * 1.05;  // Height at maximum scale
+                    const safeY = maxScaledHeight / 2 + 10;  // Half height (since we're centering) plus margin
+                    
+                    this.ctx.save();
+                    this.ctx.translate(this.canvas.width/2, safeY); // Position with safe margin
+                    this.ctx.scale(breatheScale, breatheScale);
+                    
+                    // Create rainbow gradient
+                    const gradient = this.ctx.createLinearGradient(-100, 0, 100, 0);
+                    const time = Date.now() * 0.001;
+                    gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
+                    gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
+                    gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.font = '24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('New Highscore!', 0, 0);
+                    
+                    this.ctx.restore();
+                }
+                
                 this.ctx.restore();
                 
                 // Draw restart text without pulse
@@ -1518,6 +1559,20 @@ class Game {
     
     restart() {
         if (!this.canRestart) return;
+        
+        // Fade out highscore applause sound if it's playing
+        if (!this.highscoreApplauseSound.paused) {
+            const fadeOut = () => {
+                if (this.highscoreApplauseSound.volume > 0.01) {
+                    this.highscoreApplauseSound.volume = Math.max(0, this.highscoreApplauseSound.volume - 0.025);  // Fade over 1 second (40 steps)
+                    setTimeout(fadeOut, 25);  // 25ms * 40 steps = 1000ms (1 second)
+                } else {
+                    this.highscoreApplauseSound.pause();
+                    this.highscoreApplauseSound.volume = 0.25;  // Reset volume for next time
+                }
+            };
+            fadeOut();
+        }
         
         // Play restart sound
         this.restartSound.currentTime = 0;
