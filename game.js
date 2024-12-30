@@ -583,9 +583,15 @@ class Game {
         const multiplier = this.getTreeMultiplier();
         const treeCount = this.baseTreeCount * multiplier;
         
+        // Calculate wider spawn range for portrait mode
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const spawnWidthMultiplier = isPortrait ? 2 : 1;  // Double width in portrait
+        const spawnWidth = this.canvas.width * spawnWidthMultiplier;
+        const spawnOffset = (spawnWidth - this.canvas.width) / 2;
+        
         for (let i = 0; i < treeCount; i++) {
             this.trees.push({
-                x: Math.random() * this.canvas.width,
+                x: (Math.random() * spawnWidth) - spawnOffset,  // Can spawn outside visible area
                 y: (Math.random() * this.canvas.height * 0.7) + (this.canvas.height * 0.3)
             });
         }
@@ -670,10 +676,6 @@ class Game {
             let horizontalSpeed = 0;
             let verticalSpeed = 0;
             
-            // Check if screen is in portrait mode
-            const isPortrait = window.innerHeight > window.innerWidth;
-            const verticalSpeedMultiplier = isPortrait ? 2 : 1;  // Double speed in portrait
-
             if (this.easyMode) {
                 // Easy mode movement
                 const speed = 1;
@@ -681,12 +683,12 @@ class Game {
                 // Calculate speeds based on active keys
                 if (this.activeKeys.has('ArrowLeft')) horizontalSpeed += speed;
                 if (this.activeKeys.has('ArrowRight')) horizontalSpeed -= speed;
-                if (this.activeKeys.has('ArrowUp')) verticalSpeed += speed * verticalSpeedMultiplier;
-                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= speed * verticalSpeedMultiplier;
+                if (this.activeKeys.has('ArrowUp')) verticalSpeed += speed;
+                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= speed;
             } else {
                 // Normal mode movement
                 horizontalSpeed = this.direction === 'left' ? 1 : -1;
-                verticalSpeed = -1 * verticalSpeedMultiplier;  // Apply multiplier to normal mode too
+                verticalSpeed = -1;  // Removed multiplier
             }
             
             // Move trees with adjusted vertical speed
@@ -705,7 +707,7 @@ class Game {
                 const diagonalSpeed = snow.speed;
                 if (this.easyMode) {
                     snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;  // Divide by multiplier to maintain original speed
+                    snow.y += verticalSpeed * diagonalSpeed;  // Divide by multiplier to maintain original speed
                 } else {
                     snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
                     snow.y -= diagonalSpeed;  // Keep original speed for snow
@@ -735,7 +737,7 @@ class Game {
                 const diagonalSpeed = snow.speed;
                 if (this.easyMode) {
                     snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;
+                    snow.y += verticalSpeed * diagonalSpeed;
                 } else {
                     snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
                     snow.y -= diagonalSpeed;
@@ -760,7 +762,7 @@ class Game {
                 const diagonalSpeed = snow.speed;
                 if (this.easyMode) {
                     snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;
+                    snow.y += verticalSpeed * diagonalSpeed;
                 } else {
                     snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
                     snow.y -= diagonalSpeed;
@@ -786,8 +788,13 @@ class Game {
             const desiredTreeCount = this.baseTreeCount * currentMultiplier;
             
             while (this.trees.length < desiredTreeCount) {
+                const isPortrait = window.innerHeight > window.innerWidth;
+                const spawnWidthMultiplier = isPortrait ? 2 : 1;
+                const spawnWidth = this.canvas.width * spawnWidthMultiplier;
+                const spawnOffset = (spawnWidth - this.canvas.width) / 2;
+                
                 this.trees.push({
-                    x: Math.random() * this.canvas.width,
+                    x: (Math.random() * spawnWidth) - spawnOffset,
                     y: this.canvas.height + (Math.random() * 100 - 50)
                 });
             }
@@ -904,7 +911,7 @@ class Game {
             this.superSnowflakes.forEach(snow => {
                 if (this.easyMode) {
                     snow.x += horizontalSpeed * snow.speed;
-                    snow.y += verticalSpeed * snow.speed / verticalSpeedMultiplier;
+                    snow.y += verticalSpeed * snow.speed;
                 } else {
                     snow.x += (this.direction === 'left' ? snow.speed : -snow.speed);
                     snow.y -= snow.speed;
