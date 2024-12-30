@@ -582,8 +582,10 @@ class Game {
         // Get current tree multiplier based on time
         const multiplier = this.getTreeMultiplier();
         
-        // Always use the higher tree count (what we used for portrait)
-        const treeCount = this.baseTreeCount * multiplier * 4;  // Always use 4x multiplier
+        // Scale base tree count with screen width
+        const widthRatio = this.canvas.width / 800;  // Use 800px as reference width
+        const baseTreeCount = Math.ceil(this.baseTreeCount * widthRatio);
+        const treeCount = baseTreeCount * multiplier * 4;  // Always use 4x multiplier
         
         // Calculate spawn width based on screen dimensions
         const screenRatio = this.canvas.width / this.canvas.height;
@@ -791,7 +793,9 @@ class Game {
             
             // Check if we need to add more trees based on time
             const currentMultiplier = this.getTreeMultiplier();
-            const desiredTreeCount = this.baseTreeCount * currentMultiplier * 4;  // Always use 4x multiplier
+            const widthRatio = this.canvas.width / 800;
+            const baseTreeCount = Math.ceil(this.baseTreeCount * widthRatio);
+            const desiredTreeCount = baseTreeCount * currentMultiplier * 4;  // Always use 4x multiplier
             
             while (this.trees.length < desiredTreeCount) {
                 const screenRatio = this.canvas.width / this.canvas.height;
@@ -1444,7 +1448,7 @@ class Game {
             this.ctx.save();
             this.ctx.translate(snow.x, snow.y);
             this.ctx.rotate(snow.rotation);
-            this.ctx.globalAlpha = 0.1;  // 10% opacity
+            this.ctx.globalAlpha = 0.15;  // Changed to 15% opacity
             this.ctx.drawImage(
                 this.superSnowflakeImg,
                 -snow.size/2,
