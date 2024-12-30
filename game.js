@@ -137,7 +137,7 @@ class Game {
             new Audio('Falstad_VOX_Cheer04.ogg'),
             new Audio('Falstad_VOX_Cheer05.ogg')
         ];
-        this.voxCheers.forEach(sound => sound.volume = 0.25);
+        this.voxCheers.forEach(sound => sound.volume = 0.175);  // Changed from 0.25 to 0.175 (70% as loud)
         this.lastPlayedVoxIndex = -1;  // Track last played VOX sound
 
         // Setup confetti
@@ -1303,7 +1303,7 @@ class Game {
                 this.ctx.font = '48px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText(`Score: ${this.currentScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2);
-                this.ctx.fillText(`High Score: ${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 60);
+                this.ctx.fillText(`Highscore: ${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 60);
                 
                 this.ctx.restore();
                 
