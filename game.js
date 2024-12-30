@@ -62,6 +62,15 @@ class Game {
         // Initialize game components
         this.spawnInitialTrees();
         this.gameLoop();
+
+        // Add flag to control features
+        this.SHOW_SKY_AND_FADING = false;  // Set to true to restore original behavior
+        
+        // Add overlay reference
+        this.mountainOverlay = document.getElementById('mountain-overlay');
+        
+        // Update canvas z-index based on feature flag
+        this.canvas.style.zIndex = this.SHOW_SKY_AND_FADING ? "2" : "3";
     }
     
     setCanvasSize() {
@@ -220,9 +229,9 @@ class Game {
         const cornerSize = 24; // Changed from 8 to 24 (3x bigger)
         const playerBaseHitbox = {
             x: this.playerX - 20,
-            y: this.playerY - 20,
+            y: this.playerY,
             width: 40,
-            height: 40
+            height: 20
         };
         
         // Only check collisions if not invulnerable
@@ -238,6 +247,7 @@ class Game {
                 if (this.checkPlayerCollision(playerBaseHitbox, treeHitbox, cornerSize)) {
                     this.gameOver = true;
                     this.canRestart = false;
+                    this.gameOverTime = Date.now();  // Track when game over started
                     this.highScore = Math.max(this.highScore, this.currentScore);
                     setTimeout(() => {
                         this.canRestart = true;
@@ -295,13 +305,22 @@ class Game {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Update sky gradient
-        const skyColors = this.getSkyGradient();
-        const sky = document.getElementById('sky');
-        sky.style.background = `linear-gradient(to bottom, ${skyColors.top}, ${skyColors.bottom})`;
+        // Only update sky if feature is enabled
+        if (this.SHOW_SKY_AND_FADING) {
+            const skyColors = this.getSkyGradient();
+            const sky = document.getElementById('sky');
+            sky.style.background = `linear-gradient(to bottom, ${skyColors.top}, ${skyColors.bottom})`;
+            
+            // Show/hide mountain overlay
+            const overlay = document.getElementById('mountain-overlay');
+            if (overlay) overlay.style.display = 'none';
+        } else {
+            const overlay = document.getElementById('mountain-overlay');
+            if (overlay) overlay.style.display = 'block';
+        }
         
-        // Draw stars if after 150 seconds (2:30), fully visible by 180 seconds (3:00)
-        if (this.currentScore >= 150) {
+        // Draw stars only if feature is enabled
+        if (this.SHOW_SKY_AND_FADING && this.currentScore >= 150) {
             // Calculate fade from 2:30 to 3:00 (30 second fade)
             const starAlpha = Math.min((this.currentScore - 150) / 30, 1);
             
@@ -316,24 +335,46 @@ class Game {
             });
         }
         
-        // Draw trees with fade effect
+        // Draw trees with fade effects
         this.trees.forEach(tree => {
-            // Calculate opacity based on position relative to player
             let opacity = 1;
-            const treeBottom = tree.y + 20;  // Bottom of tree sprite
-            const treeTop = tree.y - 20;     // Top of tree sprite
-            const playerTop = this.playerY - 20;  // Top of player sprite
             
-            if (treeBottom < playerTop + 40) {  // If tree overlaps or is above player's height
-                // Fade out over the height of the player (40px)
-                opacity = Math.max(0, (treeBottom - playerTop) / 40);
+            if (this.gameOver) {
+                const treeBottom = tree.y + 30;
+                const playerTop = this.playerY - 20;
+                
+                if (treeBottom <= playerTop) {
+                    // If tree is above player during game over, fade out with sky timing
+                    const timeSinceGameOver = (Date.now() - (this.gameOverTime || Date.now())) / 1000;
+                    const fadeProgress = Math.min(timeSinceGameOver, 1);
+                    opacity = 1 - fadeProgress;
+                }
+            } else if (this.SHOW_SKY_AND_FADING) {
+                // Normal gameplay fade logic when feature enabled
+                const treeBottom = tree.y + 20;
+                const playerTop = this.playerY - 20;
+                
+                if (treeBottom < playerTop + 40) {
+                    opacity = Math.max(0, (treeBottom - playerTop) / 40);
+                }
             }
             
-            // Save context for opacity
             this.ctx.save();
             this.ctx.globalAlpha = opacity;
             this.ctx.drawImage(this.treeImg, tree.x - 8, tree.y - 20, 16, 40);
             this.ctx.restore();
+            
+            // Draw collision boxes during game over for non-faded trees
+            if (this.gameOver && opacity > 0) {
+                this.ctx.strokeStyle = 'red';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(
+                    tree.x - 2.5,
+                    tree.y + 10,
+                    5,
+                    10
+                );
+            }
         });
         
         // Calculate scale animation
@@ -393,36 +434,28 @@ class Game {
         }
         
         if (this.gameOver) {
+            // Show sky with fade animation when game over
+            if (this.mountainOverlay) {
+                this.mountainOverlay.style.transition = 'opacity 1s';
+                this.mountainOverlay.style.opacity = '0';
+            }
+            
             // Draw semi-transparent overlay
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
             
-            // Draw collision boxes only during game over and only for non-fading trees
-            this.trees.forEach(tree => {
-                const treeBottom = tree.y + 20;
-                const playerTop = this.playerY - 20;
-                
-                // Only draw collision box if tree isn't fading out
-                if (!(treeBottom < playerTop + 40)) {
-                    this.ctx.strokeStyle = 'red';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(
-                        tree.x - 2.5,
-                        tree.y + 10,
-                        5,
-                        10
-                    );
-                }
-            });
+            // Track time since game over for fade animation
+            const timeSinceGameOver = (Date.now() - (this.gameOverTime || Date.now())) / 1000;
+            const fadeProgress = Math.min(timeSinceGameOver, 1);  // 0 to 1 over 1 second
             
             // Draw player collision box
             this.ctx.strokeStyle = 'blue';
             this.ctx.lineWidth = 1;
             this.ctx.strokeRect(
                 this.playerX - (20 * scale),
-                this.playerY - (20 * scale),
+                this.playerY + (0 * scale),
                 40 * scale,
-                40 * scale
+                20 * scale
             );
             
             // Draw game over text
@@ -449,6 +482,13 @@ class Game {
     
     restart() {
         if (!this.canRestart) return;
+        
+        // Instantly hide sky on restart
+        if (this.mountainOverlay) {
+            this.mountainOverlay.style.transition = 'none';  // Disable transition
+            this.mountainOverlay.style.opacity = '1';
+        }
+        
         this.gameOver = false;
         this.canRestart = false;
         this.trees = [];
