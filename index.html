@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <script>
-        const GAME_VERSION = '1.93';
+        const GAME_VERSION = '1.95';
         const CACHE_BUST = Date.now();  // Current timestamp for cache busting
         
         // Add on-screen console for mobile debugging
@@ -30,11 +30,21 @@
         */
 
         window.addEventListener('load', function() {
-            if (!localStorage.getItem('gameVersion') || 
-                localStorage.getItem('gameVersion') !== GAME_VERSION) {
+            const oldVersion = localStorage.getItem('gameVersion');
+            const savedHighScore = localStorage.getItem('highScore');
+            
+            if (!oldVersion || oldVersion !== GAME_VERSION) {
+                // Preserve the highscore during version update
                 localStorage.setItem('gameVersion', GAME_VERSION);
-                if (!window.location.hash) {
-                    window.location.reload(true);
+                if (savedHighScore) {
+                    const tempHighScore = savedHighScore;
+                    if (!window.location.hash) {
+                        window.location.reload(true);
+                    }
+                } else {
+                    if (!window.location.hash) {
+                        window.location.reload(true);
+                    }
                 }
             }
         });

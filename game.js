@@ -9,6 +9,11 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.setCanvasSize();
         
+        // Initialize highscore in localStorage if it doesn't exist
+        if (!localStorage.getItem('highScore') || isNaN(parseFloat(localStorage.getItem('highScore')))) {
+            localStorage.setItem('highScore', '0');
+        }
+        
         // Add screen shake configuration
         this.screenShake = {
             active: false,
@@ -865,7 +870,12 @@ class Game {
                         
                         this.gameOver = true;
                         this.canRestart = false;
-                        this.highScore = Math.max(this.highScore, this.currentScore);
+                        
+                        // Update highscore in localStorage if current score is higher
+                        const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
+                        if (this.currentScore > storedHighScore) {
+                            localStorage.setItem('highScore', this.currentScore.toString());
+                        }
                         
                         // Stop all skiing sounds immediately
                         this.skiingSounds.forEach(sound => {
@@ -1197,6 +1207,12 @@ class Game {
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'bottom';
             this.ctx.fillText(`v${GAME_VERSION}`, 10, this.canvas.height - 10);
+            
+            // Draw highscore in bottom right
+            this.ctx.textAlign = 'right';
+            const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
+            this.ctx.fillText(`Highscore: ${storedHighScore.toFixed(2)}s`, this.canvas.width - 10, this.canvas.height - 10);
+            
             this.ctx.restore();
         } else {
             // Draw trees with conditional fade effect
@@ -1320,7 +1336,8 @@ class Game {
                 this.ctx.fillText(`Score:`, this.canvas.width/2, this.canvas.height/2 - 30);
                 this.ctx.fillText(`${this.currentScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 30);
                 this.ctx.fillText(`Highscore:`, this.canvas.width/2, this.canvas.height/2 + 90);
-                this.ctx.fillText(`${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 150);
+                const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
+                this.ctx.fillText(`${storedHighScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 150);
                 
                 this.ctx.restore();
                 
