@@ -136,6 +136,10 @@ class Game {
         this.highscoreApplauseSound = new Audio('Cheer Clapping Small Group In Theater Applause sound effect.mp3');
         this.highscoreApplauseSound.volume = 0.25;
 
+        // Setup success jingle for beating highscore during gameplay
+        this.successJingle = new Audio('Success Jingle Plucking.wav');
+        this.successJingle.volume = 0.25;
+
         // Setup crowd cheering sounds
         this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf_01.mp3');
         this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf_01.mp3');
@@ -706,6 +710,22 @@ class Game {
             if (this.isTabVisible) {
                 this.currentScore = (Date.now() - this.startTime) / 1000;
                 this.lastVisibleTime = Date.now();
+                
+                // Check if we just surpassed the highscore during gameplay
+                const storedHighScore = parseFloat(localStorage.getItem('highScore')) || 0;
+                if (!this.gameOver && storedHighScore > 1 && this.currentScore > storedHighScore && !this.hasPlayedHighscoreJingle) {
+                    // Play success jingle
+                    this.successJingle.currentTime = 0;
+                    this.successJingle.play();
+                    this.hasPlayedHighscoreJingle = true;  // Only play once per run
+                    
+                    // Flash timer gold
+                    this.timerText.style.transition = 'color 0.3s';
+                    this.timerText.style.color = '#FFD700';  // Gold color
+                    setTimeout(() => {
+                        this.timerText.style.color = '#001933';  // Reset to original color
+                    }, 1000);
+                }
             }
             
             // Check if start animation and invulnerability should end
@@ -882,6 +902,9 @@ class Game {
                             // Play highscore applause sound
                             this.highscoreApplauseSound.currentTime = 0;
                             this.highscoreApplauseSound.play();
+                            // Play success jingle
+                            this.successJingle.currentTime = 0;
+                            this.successJingle.play();
                         }
                         
                         // Stop all skiing sounds immediately
