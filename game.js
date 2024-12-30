@@ -52,6 +52,9 @@ class Game {
         // Setup timer text reference but keep it hidden
         this.timerText = document.getElementById('timer-text');
         
+        // Setup speed text reference but keep it hidden
+        this.speedText = document.getElementById('speed-text');
+        
         this.restartTextStartTime = 0;  // Track when restart text appears
         
         // Setup skiing sound
@@ -229,8 +232,10 @@ class Game {
                             this.skiingSounds[0].play();
                             this.snowstormSound.play();
                             
+                            // Hide birthday text and show timer when starting game
                             this.birthdayText.style.opacity = '0';
                             this.timerText.style.opacity = '1';
+                            this.speedText.style.opacity = '1';
                             
                             this.initializeGame();
                             this.setupEventListeners();
@@ -424,6 +429,7 @@ class Game {
                 // Hide birthday text and show timer when starting game
                 this.birthdayText.style.opacity = '0';
                 this.timerText.style.opacity = '1';
+                this.speedText.style.opacity = '1';
                 
                 this.initializeGame();
                 
@@ -630,8 +636,8 @@ class Game {
     
     // Add method to calculate speed multiplier based on time
     getSpeedMultiplier() {
-        const minutesPassed = this.currentScore / 250;  // How many 250-second intervals have passed
-        return 1 + Math.floor(minutesPassed);  // Start at 1, add 1 for each 3-minute interval
+        const minutesPassed = this.currentScore / 180;  // How many 3-minute intervals have passed
+        return 1 + minutesPassed;  // Start at 1, add progress continuously
     }
     
     update() {
@@ -1241,8 +1247,11 @@ class Game {
             // Update timer text if game is active
             if (!this.gameOver) {
                 this.timerText.textContent = `${this.currentScore.toFixed(2)}s`;
+                const speedMph = Math.round(this.getSpeedMultiplier() * 20);
+                this.speedText.textContent = `${speedMph} MPH`;
             } else {
                 this.timerText.style.opacity = '0';  // Hide timer on game over
+                this.speedText.style.opacity = '0';  // Hide speed on game over
             }
             
             if (this.gameOver) {
@@ -1554,6 +1563,7 @@ class Game {
         
         // Show timer again on restart
         this.timerText.style.opacity = '1';
+        this.speedText.style.opacity = '1';  // Show speed text again too
         
         // Reset snowflakes
         this.snowflakes = Array(100).fill().map(() => this.createSnowflake());
