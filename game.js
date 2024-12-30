@@ -47,26 +47,31 @@ class Game {
             new Audio('Skiing.mp3')
         ];
         this.skiingSounds.forEach(sound => {
-            sound.volume = 0;  // Start at 0 volume
+            sound.volume = 0.25;  // Start at full volume
             sound.addEventListener('timeupdate', () => {
-                // Start crossfade when 1 second from the end (0.5s fade out + 0.5s fade in)
+                // Start crossfade when 1 second from the end
                 if (sound.currentTime > sound.duration - 1) {
                     const otherSound = this.skiingSounds.find(s => s !== sound);
                     
                     // Start the other sound if it's not already playing
                     if (otherSound.paused) {
                         otherSound.currentTime = 0;
-                        otherSound.volume = 0;
-                        otherSound.play();
+                        otherSound.volume = 0.25;  // Start at full volume
+                        otherSound.play().catch(e => {
+                            console.error('Error playing skiing sound:', e);
+                        });
                     }
+                }
+                
+                // Handle fade out of current sound in last 0.5 seconds
+                if (sound.currentTime > sound.duration - 0.5) {
+                    const fadeOutProgress = (sound.duration - sound.currentTime) / 0.5;
+                    sound.volume = Math.max(0, 0.25 * fadeOutProgress);
                     
-                    // Calculate fade based on remaining time
-                    const timeLeft = sound.duration - sound.currentTime;
-                    if (timeLeft <= 0.5) {  // Last 0.5 seconds - fade out current
-                        sound.volume = Math.min(0.25 * (timeLeft / 0.5), 0.25);
-                    }
-                    if (timeLeft <= 1 && timeLeft > 0.5) {  // 0.5-1 seconds left - fade in next
-                        otherSound.volume = Math.min(0.25 * (1 - (timeLeft / 0.5)), 0.25);
+                    // Ensure other sound is at full volume
+                    const otherSound = this.skiingSounds.find(s => s !== sound);
+                    if (!otherSound.paused) {
+                        otherSound.volume = 0.25;
                     }
                 }
             });
@@ -244,6 +249,14 @@ class Game {
         document.addEventListener('keydown', startGame);
         document.addEventListener('click', startGame);
         document.addEventListener('touchstart', startGame);
+
+        this.startAnimation = {
+            startTime: Date.now(),
+            scaleComplete: false,
+            flashingComplete: false,
+            invulnerable: true,
+            countdownNumber: 3  // Start at 3
+        };
     }
 
     setupIntroEventListeners() {
@@ -320,7 +333,8 @@ class Game {
             startTime: Date.now(),
             scaleComplete: false,
             flashingComplete: false,
-            invulnerable: true
+            invulnerable: true,
+            countdownNumber: 3  // Start at 3
         };
         
         // Increase base number of trees constant (from 4 to 20)
@@ -855,19 +869,19 @@ class Game {
                     : Math.pow(2, -10 * progress) * Math.sin((progress * 10 - 0.75) * c4) + 1;
             }
             
-            // Calculate flash effect
+            // Calculate flash effect and shield alpha outside the shield drawing code
             let shieldAlpha = 0;
             if (!this.startAnimation.flashingComplete) {
                 const timeSinceStart = Date.now() - this.startAnimation.startTime;
-                const flashProgress = (timeSinceStart % 300) / 300; // 0.3 second delay
-                shieldAlpha = Math.sin(flashProgress * Math.PI) * 0.5; // Smooth sine wave for flash
+                const flashProgress = (timeSinceStart % 300) / 300;
+                shieldAlpha = Math.sin(flashProgress * Math.PI) * 0.5;
             }
             
             // Draw player and shield
             this.ctx.save();
             this.ctx.translate(this.playerX, this.playerY);
             
-            // Draw shield circle if active
+            // Draw shield circle
             if (shieldAlpha > 0) {
                 this.ctx.beginPath();
                 this.ctx.arc(0, 0, 25 * scale, 0, Math.PI * 2);
@@ -878,8 +892,35 @@ class Game {
                 this.ctx.strokeStyle = `rgba(0, 255, 0, ${shieldAlpha * 0.3})`;
                 this.ctx.lineWidth = 6;
                 this.ctx.stroke();
+                
+                // Draw countdown numbers
+                const timeSinceStart = Date.now() - this.startAnimation.startTime;
+                const countdownTime = Math.floor(timeSinceStart / 666.67); // 2000ms / 3 numbers ≈ 666.67ms per number
+                const currentNumber = 3 - countdownTime;
+                
+                if (currentNumber >= 1 && currentNumber <= 3) {
+                    const numberProgress = (timeSinceStart % 666.67) / 666.67;
+                    
+                    // Scale from 3x to 1x size
+                    const numberScale = 3 - (2 * numberProgress);
+                    // Fade in first half, fade out second half
+                    const numberAlpha = numberProgress <= 0.5 
+                        ? numberProgress * 2 
+                        : 2 - (numberProgress * 2);
+                    
+                    this.ctx.save();
+                    this.ctx.translate(0, -80);  // Changed from -40 to -80 to position higher above player
+                    this.ctx.scale(numberScale, numberScale);
+                    this.ctx.fillStyle = `rgba(0, 255, 0, ${numberAlpha})`;
+                    this.ctx.font = '24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(currentNumber.toString(), 0, 0);
+                    this.ctx.restore();
+                }
             }
             
+            // Draw player sprite
             if (this.direction === 'right') {
                 this.ctx.scale(-scale, scale);
             } else {
@@ -1066,7 +1107,8 @@ class Game {
             startTime: Date.now(),
             scaleComplete: false,
             flashingComplete: false,
-            invulnerable: true
+            invulnerable: true,
+            countdownNumber: 3  // Start at 3
         };
         
         // Regenerate star positions
