@@ -54,6 +54,10 @@ class Game {
         this.snowstormSound = new Audio('snowstorm.mp3');
         this.snowstormSound.loop = true;
         this.snowstormSound.volume = 0.25;
+        
+        // Setup restart sound at full volume
+        this.restartSound = new Audio('Juicy Wooden Click.wav');
+        this.restartSound.volume = 1.0;  // Changed from 0.25 to 1.0
 
         // Add error handling and logging
         this.snowstormSound.addEventListener('error', (e) => {
@@ -66,6 +70,31 @@ class Game {
                 console.error('Error playing snowstorm sound:', e);
             });
         });
+
+        // Setup crowd cheering sounds
+        this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf.wav');
+        this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf.wav');
+        this.cheerSound1.volume = 0.25;
+        this.cheerSound2.volume = 0.25;
+
+        // Setup VOX cheer sounds
+        this.voxCheers = [
+            new Audio('ChenBase_VOX_Cheer01.ogg'),
+            new Audio('ChenBase_VOX_Cheer02.ogg'),
+            new Audio('Falstad_VOX_Cheer04.ogg'),
+            new Audio('Falstad_VOX_Cheer05.ogg')
+        ];
+        this.voxCheers.forEach(sound => sound.volume = 0.25);
+
+        // Setup background canvas
+        this.bgCanvas = document.getElementById('backgroundCanvas');
+        this.bgCtx = this.bgCanvas.getContext('2d');
+        this.setBackgroundCanvasSize();
+        
+        // Background wave properties
+        this.waveOffset = 0;
+        this.waveHeight = 100;  // Height of each wave
+        this.waveCount = 5;     // Number of waves visible at once
     }
 
     setupIntroEventListeners() {
@@ -73,9 +102,14 @@ class Game {
             if (this.isIntroScreen) {
                 this.isIntroScreen = false;
                 
+                // Play random cheer sound
+                const cheerSound = Math.random() < 0.5 ? this.cheerSound1 : this.cheerSound2;
+                cheerSound.currentTime = 0;
+                cheerSound.play();
+                
                 // Start both skiing and snowstorm sounds when game starts
                 this.skiingSound.play();
-                this.snowstormSound.play();  // Now it will work because user has interacted
+                this.snowstormSound.play();
                 
                 // Hide birthday text and show timer when starting game
                 this.birthdayText.style.opacity = '0';
@@ -168,6 +202,12 @@ class Game {
     setCanvasSize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+        this.setBackgroundCanvasSize();
+    }
+    
+    setBackgroundCanvasSize() {
+        this.bgCanvas.width = window.innerWidth;
+        this.bgCanvas.height = window.innerHeight;
     }
     
     setupBirthdayText() {
@@ -440,6 +480,10 @@ class Game {
     }
     
     draw() {
+        // Draw background first
+        this.drawBackground();
+        
+        // Clear game canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         if (this.isIntroScreen) {
@@ -692,8 +736,48 @@ class Game {
         }
     }
     
+    drawBackground() {
+        this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
+        
+        // Create gradient for waves
+        const gradient = this.bgCtx.createLinearGradient(0, 0, 0, this.waveHeight);
+        gradient.addColorStop(0, '#F0F0F0');  // Almost white
+        gradient.addColorStop(1, '#D8D8D8');  // Our background gray
+        
+        // Draw waves
+        this.bgCtx.fillStyle = gradient;
+        this.bgCtx.beginPath();
+        this.bgCtx.moveTo(0, this.bgCanvas.height);
+        
+        // Draw multiple waves
+        for (let y = this.bgCanvas.height + this.waveOffset; y > -this.waveHeight; y -= this.waveHeight) {
+            for (let x = 0; x <= this.bgCanvas.width; x += 50) {
+                const wave = Math.sin(x * 0.02 + (y * 0.01)) * 20;
+                if (x === 0) {
+                    this.bgCtx.moveTo(x, y + wave);
+                } else {
+                    this.bgCtx.lineTo(x, y + wave);
+                }
+            }
+        }
+        
+        this.bgCtx.lineTo(this.bgCanvas.width, this.bgCanvas.height);
+        this.bgCtx.fill();
+    }
+    
     restart() {
         if (!this.canRestart) return;
+        
+        // Play restart sound
+        this.restartSound.currentTime = 0;
+        this.restartSound.play();
+        
+        // Play random VOX cheer after delay
+        setTimeout(() => {
+            const randomCheer = this.voxCheers[Math.floor(Math.random() * this.voxCheers.length)];
+            randomCheer.currentTime = 0;
+            randomCheer.play();
+        }, 200);
         
         // Start skiing sound again on restart
         this.skiingSound.play();

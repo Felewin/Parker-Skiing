@@ -14,7 +14,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background: #E5E5E5;  /* Changed from #E8E8E8 to slightly darker */
+            background: #D8D8D8;  /* Changed from #E5E5E5 to a darker gray */
         }
 
         canvas {
@@ -98,11 +98,26 @@
                 line-height: 1.2;  /* Add some spacing between lines */
             }
         }
+
+        #backgroundCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        canvas#gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
     <div id="birthday-text"></div>
     <div id="timer-text"></div>
+    <canvas id="backgroundCanvas"></canvas>
     <canvas id="gameCanvas"></canvas>
     <script src="game.js"></script>
 </body>
