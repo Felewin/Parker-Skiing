@@ -470,53 +470,10 @@ class Game {
                 this.ctx.fill();
             });
         } else {
-            // Only update sky if feature is enabled
-            if (this.SHOW_SKY_AND_FADING) {
-                const skyColors = this.getSkyGradient();
-                const sky = document.getElementById('sky');
-                sky.style.background = `linear-gradient(to bottom, ${skyColors.top}, ${skyColors.bottom})`;
-                
-                // Show/hide mountain overlay
-                const overlay = document.getElementById('mountain-overlay');
-                if (overlay) overlay.style.display = 'none';
-            } else {
-                const overlay = document.getElementById('mountain-overlay');
-                if (overlay) overlay.style.display = 'block';
-            }
-            
-            // Draw stars only if feature is enabled
-            if (this.SHOW_SKY_AND_FADING && this.currentScore >= 150) {
-                // Calculate fade from 2:30 to 3:00 (30 second fade)
-                const starAlpha = Math.min((this.currentScore - 150) / 30, 1);
-                
-                this.stars.forEach(star => {
-                    const twinkle = Math.sin(Date.now() * 0.001 * star.twinkleSpeed) * 0.5 + 0.5;
-                    // Combine the fade-in alpha with the twinkle effect
-                    const finalAlpha = starAlpha * twinkle;
-                    this.ctx.fillStyle = `rgba(255, 255, 255, ${finalAlpha})`;
-                    this.ctx.beginPath();
-                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                });
-            }
-            
             // Draw trees with conditional fade effect
             this.trees.forEach(tree => {
-                let opacity = 1;
-                
-                if (this.SHOW_SKY_AND_FADING) {
-                    const treeBottom = tree.y + 20;
-                    const playerTop = this.playerY - 20;
-                    
-                    if (treeBottom < playerTop + 40) {
-                        opacity = Math.max(0, (treeBottom - playerTop) / 40);
-                    }
-                }
-                
-                this.ctx.save();
-                this.ctx.globalAlpha = opacity;
+                // Just draw trees normally
                 this.ctx.drawImage(this.treeImg, tree.x - 8, tree.y - 20, 16, 40);
-                this.ctx.restore();
             });
             
             // Calculate scale animation
@@ -684,60 +641,6 @@ class Game {
         this.update();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
-    }
-    
-    // Add method to calculate sky colors based on time
-    getSkyGradient() {
-        const timeInSeconds = this.currentScore;
-        
-        // Default sky colors (0-60s)
-        let topColor = [0, 51, 102];      // #003366 (dark blue)
-        let bottomColor = [173, 216, 230]; // #ADD8E6 (light blue)
-        
-        if (timeInSeconds >= 60 && timeInSeconds <= 120) {
-            // Transition to sunset colors (60-120s)
-            const progress = (timeInSeconds - 60) / 60;
-            
-            // Transition from blue to pink at top
-            topColor = [
-                this.lerp(0, 255, progress),     // R: 0->255
-                this.lerp(51, 182, progress),    // G: 51->182
-                this.lerp(102, 193, progress)    // B: 102->193
-            ];
-            
-            // Transition from light blue to orange at bottom
-            bottomColor = [
-                this.lerp(173, 255, progress),   // R: 173->255
-                this.lerp(216, 140, progress),   // G: 216->140
-                this.lerp(230, 0, progress)      // B: 230->0
-            ];
-        } else if (timeInSeconds > 120 && timeInSeconds <= 180) {
-            // Transition to night (120-180s)
-            const progress = (timeInSeconds - 120) / 60;
-            
-            // Transition from pink to black at top
-            topColor = [
-                this.lerp(255, 0, progress),     // R: 255->0
-                this.lerp(182, 0, progress),     // G: 182->0
-                this.lerp(193, 0, progress)      // B: 193->0
-            ];
-            
-            // Transition from orange to black at bottom
-            bottomColor = [
-                this.lerp(255, 0, progress),     // R: 255->0
-                this.lerp(140, 0, progress),     // G: 140->0
-                this.lerp(0, 0, progress)        // B: 0->0
-            ];
-        } else if (timeInSeconds > 180) {
-            // Complete night (after 180s)
-            topColor = [0, 0, 0];
-            bottomColor = [0, 0, 0];
-        }
-        
-        return {
-            top: `rgb(${topColor.join(',')})`,
-            bottom: `rgb(${bottomColor.join(',')})`
-        };
     }
     
     // Helper method for color interpolation
