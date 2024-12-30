@@ -581,17 +581,19 @@ class Game {
     spawnInitialTrees() {
         // Get current tree multiplier based on time
         const multiplier = this.getTreeMultiplier();
-        const treeCount = this.baseTreeCount * multiplier;
         
-        // Calculate wider spawn range for portrait mode
-        const isPortrait = window.innerHeight > window.innerWidth;
-        const spawnWidthMultiplier = isPortrait ? 2 : 1;  // Double width in portrait
+        // Always use the higher tree count (what we used for portrait)
+        const treeCount = this.baseTreeCount * multiplier * 4;  // Always use 4x multiplier
+        
+        // Calculate spawn width based on screen dimensions
+        const screenRatio = this.canvas.width / this.canvas.height;
+        const spawnWidthMultiplier = Math.max(3, 12 / screenRatio);  // Scale between 3-12x based on ratio
         const spawnWidth = this.canvas.width * spawnWidthMultiplier;
         const spawnOffset = (spawnWidth - this.canvas.width) / 2;
         
         for (let i = 0; i < treeCount; i++) {
             this.trees.push({
-                x: (Math.random() * spawnWidth) - spawnOffset,  // Can spawn outside visible area
+                x: (Math.random() * spawnWidth) - spawnOffset,
                 y: (Math.random() * this.canvas.height * 0.7) + (this.canvas.height * 0.3)
             });
         }
@@ -697,8 +699,12 @@ class Game {
                 tree.y += verticalSpeed;
                 
                 if (tree.y < -50) {
+                    const isPortrait = window.innerHeight > window.innerWidth;
+                    const spawnWidthMultiplier = isPortrait ? 12 : 3;
+                    const spawnWidth = this.canvas.width * spawnWidthMultiplier;
+                    const spawnOffset = (spawnWidth - this.canvas.width) / 2;
                     tree.y = this.canvas.height + 50;
-                    tree.x = Math.random() * this.canvas.width;
+                    tree.x = (Math.random() * spawnWidth) - spawnOffset;
                 }
             });
             
@@ -785,11 +791,11 @@ class Game {
             
             // Check if we need to add more trees based on time
             const currentMultiplier = this.getTreeMultiplier();
-            const desiredTreeCount = this.baseTreeCount * currentMultiplier;
+            const desiredTreeCount = this.baseTreeCount * currentMultiplier * 4;  // Always use 4x multiplier
             
             while (this.trees.length < desiredTreeCount) {
-                const isPortrait = window.innerHeight > window.innerWidth;
-                const spawnWidthMultiplier = isPortrait ? 2 : 1;
+                const screenRatio = this.canvas.width / this.canvas.height;
+                const spawnWidthMultiplier = Math.max(3, 12 / screenRatio);  // Scale between 3-12x based on ratio
                 const spawnWidth = this.canvas.width * spawnWidthMultiplier;
                 const spawnOffset = (spawnWidth - this.canvas.width) / 2;
                 
