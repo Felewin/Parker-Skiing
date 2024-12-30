@@ -42,7 +42,7 @@ class Game {
         this.restartTextStartTime = 0;  // Track when restart text appears
         
         // Setup skiing sound
-        this.skiingSound = new Audio('Skiing.ogg');
+        this.skiingSound = new Audio('Skiing.mp3');
         this.skiingSound.loop = true;
         this.skiingSound.volume = 0.25;  // Set to 25%
         
@@ -85,22 +85,143 @@ class Game {
             new Audio('Falstad_VOX_Cheer05.ogg')
         ];
         this.voxCheers.forEach(sound => sound.volume = 0.25);
+        this.lastPlayedVoxIndex = -1;  // Track last played VOX sound
 
-        // Setup background canvas
-        this.bgCanvas = document.getElementById('backgroundCanvas');
-        this.bgCtx = this.bgCanvas.getContext('2d');
-        this.setBackgroundCanvasSize();
+        // Setup confetti
+        this.confetti = [];
+        this.confettiColors = [
+            '#ff9aa2', // pastel red
+            '#ffdac1', // pastel orange
+            '#ffffd8', // pastel yellow
+            '#b5ead7', // pastel green
+            '#c7ceea', // pastel blue
+            '#e2c0ff'  // pastel purple
+        ];
+
+        // Add intro text visibility state
+        this.showIntroText = false;
         
-        // Background wave properties
-        this.waveOffset = 0;
-        this.waveHeight = 100;  // Height of each wave
-        this.waveCount = 5;     // Number of waves visible at once
+        // Setup intro music
+        this.introMusic = new Audio('Blue Sky.mp3');
+        this.introMusic.volume = 0.25;
+        this.introMusic.loop = true;
+        this.introMusic.addEventListener('ended', () => {
+            if (this.isIntroScreen) {  // Only restart if still in intro
+                this.introMusic.currentTime = 0;
+                this.introMusic.play();
+            }
+        });
+        
+        this.introTextStartTime = 0;  // Track when intro text should appear
+        
+        // Add loading text state and timing
+        this.showLoadingText = true;
+        this.loadingTextStartTime = Date.now();  // Start animation immediately
+        
+        // Add loading progress tracking
+        this.loadingProgress = 0;
+        this.loadingStartTime = 0;
+        this.LOADING_DURATION = 6000;  // Changed from 7000 to 6000 (6 seconds)
+        
+        // Add PK sequence tracking for intro screen
+        this.lastPKeyTimeIntro = 0;
+        
+        // Modify first interaction listener
+        const showIntroText = (e) => {
+            // Check for PK sequence in intro
+            if (e.key === 'p') {
+                this.lastPKeyTimeIntro = Date.now();
+            } else if (e.key === 'k' && this.lastPKeyTimeIntro > 0) {
+                const timeSinceP = Date.now() - this.lastPKeyTimeIntro;
+                if (timeSinceP <= 5000) {  // Within 5 seconds
+                    // Skip loading and start game immediately
+                    this.showLoadingText = false;
+                    this.showIntroText = true;
+                    this.introTextStartTime = Date.now();
+                    this.introMusic.play();
+                    
+                    // Start game after brief delay
+                    setTimeout(() => {
+                        // Fade out intro music
+                        const fadeOut = () => {
+                            if (this.introMusic.volume > 0.01) {
+                                this.introMusic.volume = Math.max(0, this.introMusic.volume - 0.01);
+                                setTimeout(fadeOut, 40);
+                            } else {
+                                this.introMusic.pause();
+                                this.introMusic.currentTime = 0;
+                            }
+                        };
+                        fadeOut();
+                        
+                        this.isIntroScreen = false;
+                        this.createConfetti();
+                        
+                        // Play random cheer
+                        const cheerSound = Math.random() < 0.5 ? this.cheerSound1 : this.cheerSound2;
+                        cheerSound.currentTime = 0;
+                        cheerSound.play();
+                        
+                        this.skiingSound.play();
+                        this.snowstormSound.play();
+                        
+                        this.birthdayText.style.opacity = '0';
+                        this.timerText.style.opacity = '1';
+                        
+                        this.initializeGame();
+                        this.setupEventListeners();
+                    }, 500);
+                    
+                    // Remove intro listeners
+                    document.removeEventListener('keydown', showIntroText);
+                    document.removeEventListener('click', showIntroText);
+                    document.removeEventListener('touchstart', showIntroText);
+                    return;
+                }
+            }
+            
+            // Normal intro sequence if not PK
+            if (this.showLoadingText) {
+                this.showLoadingText = false;
+                this.showIntroText = true;
+                this.introMusic.play();
+                this.loadingStartTime = Date.now();
+                
+                setTimeout(() => {
+                    this.introTextStartTime = Date.now();
+                }, this.LOADING_DURATION);
+                
+                // Remove first interaction listeners
+                document.removeEventListener('keydown', showIntroText);
+                document.removeEventListener('click', showIntroText);
+                document.removeEventListener('touchstart', showIntroText);
+            }
+        };
+        
+        document.addEventListener('keydown', showIntroText);
+        document.addEventListener('click', showIntroText);
+        document.addEventListener('touchstart', showIntroText);
     }
 
     setupIntroEventListeners() {
         const startGame = () => {
-            if (this.isIntroScreen) {
+            if (this.isIntroScreen && this.showIntroText) {  // Only allow start if intro text is showing
                 this.isIntroScreen = false;
+                
+                // Fade out intro music over 2 seconds
+                const fadeOut = () => {
+                    if (this.introMusic.volume > 0.01) {
+                        this.introMusic.volume = Math.max(0, this.introMusic.volume - 0.01);  // Smaller steps
+                        setTimeout(fadeOut, 40);  // 40ms * 50 steps = 2000ms (2 seconds)
+                    } else {
+                        this.introMusic.pause();
+                        this.introMusic.currentTime = 0;
+                    }
+                };
+                fadeOut();
+                
+                // Create confetti when game starts
+                this.createConfetti();
                 
                 // Play random cheer sound
                 const cheerSound = Math.random() < 0.5 ? this.cheerSound1 : this.cheerSound2;
@@ -202,12 +323,6 @@ class Game {
     setCanvasSize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.setBackgroundCanvasSize();
-    }
-    
-    setBackgroundCanvasSize() {
-        this.bgCanvas.width = window.innerWidth;
-        this.bgCanvas.height = window.innerHeight;
     }
     
     setupBirthdayText() {
@@ -465,6 +580,17 @@ class Game {
                     snow.x = -10;
                 }
             });
+
+            // Update confetti
+            this.confetti = this.confetti.filter(conf => {
+                conf.y += conf.speedY;
+                conf.x += conf.speedX;
+                conf.rotation += conf.rotationSpeed;
+                conf.speedY += 0.1;  // Add gravity
+                
+                // Remove confetti that's fallen off screen
+                return conf.y < this.canvas.height + 20;
+            });
         }
     }
     
@@ -480,10 +606,6 @@ class Game {
     }
     
     draw() {
-        // Draw background first
-        this.drawBackground();
-        
-        // Clear game canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         if (this.isIntroScreen) {
@@ -527,11 +649,85 @@ class Game {
                 });
             }
 
-            // Draw intro text
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = '24px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('Touch anything to play!', this.canvas.width/2, this.canvas.height * 0.7);
+            // Draw loading text if active
+            if (this.showLoadingText) {
+                const timeSinceLoading = Date.now() - this.loadingTextStartTime;
+                const bounceProgress = Math.min(timeSinceLoading / 500, 1);
+                
+                // Same elastic bounce effect
+                const c4 = (2 * Math.PI) / 3;
+                let bounceScale = bounceProgress === 1 
+                    ? 1
+                    : bounceProgress === 0
+                    ? 0
+                    : Math.pow(2, -10 * bounceProgress) * Math.sin((bounceProgress * 10 - 0.75) * c4) + 1;
+                
+                // Same breathing effect
+                const pulseSpeed = 1.5;
+                const pulseAmount = 0.05;
+                const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
+                
+                const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                
+                // Draw with same gradient style
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width/2, this.canvas.height * 0.7);
+                this.ctx.scale(finalScale, finalScale);
+                
+                const gradient = this.ctx.createLinearGradient(-100, 0, 100, 0);
+                const time = Date.now() * 0.001;
+                gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
+                gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
+                gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('Tap to load game!', 0, 0);
+                
+                this.ctx.restore();
+            }
+            
+            // Only draw "Touch anything to play!" if showIntroText is true and after delay
+            else if (this.showIntroText && this.introTextStartTime > 0) {
+                const timeSinceIntroText = Date.now() - this.introTextStartTime;
+                const bounceProgress = Math.min(timeSinceIntroText / 500, 1); // 0.5 seconds bounce
+                
+                // Elastic bounce effect (same as restart text)
+                const c4 = (2 * Math.PI) / 3;
+                let bounceScale = bounceProgress === 1 
+                    ? 1
+                    : bounceProgress === 0
+                    ? 0
+                    : Math.pow(2, -10 * bounceProgress) * Math.sin((bounceProgress * 10 - 0.75) * c4) + 1;
+                
+                // After bounce, do breathing effect
+                const pulseSpeed = 1.5;
+                const pulseAmount = 0.05;
+                const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
+                
+                // Combine scales, but only apply breathing after bounce is complete
+                const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                
+                // Create gradient text
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width/2, this.canvas.height * 0.7);
+                this.ctx.scale(finalScale, finalScale);
+                
+                // Create gradient
+                const gradient = this.ctx.createLinearGradient(-100, 0, 100, 0);
+                const time = Date.now() * 0.001;
+                gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
+                gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
+                gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('Touch anything to play!', 0, 0);
+                
+                this.ctx.restore();
+            }
 
             // Draw regular snowflakes
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
@@ -556,6 +752,36 @@ class Game {
                 this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
                 this.ctx.fill();
             });
+
+            // Draw loading bar if in loading state
+            if (!this.showLoadingText && !this.introTextStartTime) {
+                const elapsed = Date.now() - this.loadingStartTime;
+                this.loadingProgress = Math.min(elapsed / this.LOADING_DURATION, 1);
+                
+                // Draw loading bar background
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                const barWidth = 300;
+                const barHeight = 20;
+                const barX = (this.canvas.width - barWidth) / 2;
+                const barY = this.canvas.height * 0.7;
+                this.ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                // Draw loading progress
+                const gradient = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+                const time = Date.now() * 0.001;
+                gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
+                gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
+                gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(barX, barY, barWidth * this.loadingProgress, barHeight);
+                
+                // Draw percentage text
+                this.ctx.font = '18px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`${Math.floor(this.loadingProgress * 100)}%`, 
+                    this.canvas.width / 2, barY + barHeight + 25);
+            }
         } else {
             // Draw trees with conditional fade effect
             this.trees.forEach(tree => {
@@ -733,36 +959,18 @@ class Game {
                 this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
                 this.ctx.fill();
             });
+
+            // Draw confetti
+            this.confetti.forEach(conf => {
+                this.ctx.save();
+                this.ctx.translate(conf.x, conf.y);
+                this.ctx.rotate(conf.rotation);
+                this.ctx.scale(conf.scale, conf.scale);
+                this.ctx.fillStyle = conf.color;
+                this.ctx.fillRect(-conf.size/2, -conf.size/2, conf.size, conf.size * 2);
+                this.ctx.restore();
+            });
         }
-    }
-    
-    drawBackground() {
-        this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
-        
-        // Create gradient for waves
-        const gradient = this.bgCtx.createLinearGradient(0, 0, 0, this.waveHeight);
-        gradient.addColorStop(0, '#F0F0F0');  // Almost white
-        gradient.addColorStop(1, '#D8D8D8');  // Our background gray
-        
-        // Draw waves
-        this.bgCtx.fillStyle = gradient;
-        this.bgCtx.beginPath();
-        this.bgCtx.moveTo(0, this.bgCanvas.height);
-        
-        // Draw multiple waves
-        for (let y = this.bgCanvas.height + this.waveOffset; y > -this.waveHeight; y -= this.waveHeight) {
-            for (let x = 0; x <= this.bgCanvas.width; x += 50) {
-                const wave = Math.sin(x * 0.02 + (y * 0.01)) * 20;
-                if (x === 0) {
-                    this.bgCtx.moveTo(x, y + wave);
-                } else {
-                    this.bgCtx.lineTo(x, y + wave);
-                }
-            }
-        }
-        
-        this.bgCtx.lineTo(this.bgCanvas.width, this.bgCanvas.height);
-        this.bgCtx.fill();
     }
     
     restart() {
@@ -772,9 +980,15 @@ class Game {
         this.restartSound.currentTime = 0;
         this.restartSound.play();
         
-        // Play random VOX cheer after delay
+        // Play random VOX cheer after delay (different from last time)
         setTimeout(() => {
-            const randomCheer = this.voxCheers[Math.floor(Math.random() * this.voxCheers.length)];
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * this.voxCheers.length);
+            } while (newIndex === this.lastPlayedVoxIndex && this.voxCheers.length > 1);
+            
+            this.lastPlayedVoxIndex = newIndex;
+            const randomCheer = this.voxCheers[newIndex];
             randomCheer.currentTime = 0;
             randomCheer.play();
         }, 200);
@@ -893,6 +1107,40 @@ class Game {
             size: Math.random() * 8 + 8,  // Size range 8-16 pixels
             speed: Math.random() * 3 + 5,  // Speed range 5-8
             opacity: Math.random() * 0.2 + 0.1  // Very transparent
+        };
+    }
+
+    createConfetti() {
+        // Create initial batch
+        for (let i = 0; i < 50; i++) {  // Start with fewer pieces
+            this.confetti.push(this.createConfettiPiece());
+        }
+        
+        // Add more confetti over time
+        let piecesAdded = 50;
+        const addMoreConfetti = () => {
+            if (piecesAdded < 200) {  // Total of 200 pieces
+                for (let i = 0; i < 10; i++) {  // Add 10 pieces every interval
+                    this.confetti.push(this.createConfettiPiece());
+                }
+                piecesAdded += 10;
+                setTimeout(addMoreConfetti, 100);  // Add more every 100ms
+            }
+        };
+        setTimeout(addMoreConfetti, 100);
+    }
+
+    createConfettiPiece() {
+        return {
+            x: Math.random() * this.canvas.width,
+            y: -20,
+            size: Math.random() * 8 + 4,
+            speedX: (Math.random() - 0.5) * 2,  // Reduced horizontal speed
+            speedY: Math.random() * 2 + 1,  // Much slower falling (1-3 speed)
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.1,  // Slower rotation
+            color: this.confettiColors[Math.floor(Math.random() * this.confettiColors.length)],
+            scale: Math.random() * 0.5 + 0.5
         };
     }
 }
