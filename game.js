@@ -1352,28 +1352,19 @@ class Game {
                     const pulseAmount = 0.05;
                     const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
                     
-                    // Calculate safe position:
-                    // Font size is 24px
-                    // Maximum scale is 1.05 (1 + pulseAmount)
-                    // Text height is roughly 1.2x font size
-                    // Add 10% margin for safety
-                    const textHeight = 24 * 1.2;  // Base text height
-                    const maxScaledHeight = textHeight * 1.05;  // Height at maximum scale
-                    const safeY = maxScaledHeight / 2 + 10;  // Half height (since we're centering) plus margin
-                    
                     this.ctx.save();
-                    this.ctx.translate(this.canvas.width/2, safeY); // Position with safe margin
+                    this.ctx.translate(this.canvas.width/2, 150); // Changed from 50 to 150 (3x further from top)
                     this.ctx.scale(breatheScale, breatheScale);
                     
                     // Create rainbow gradient
-                    const gradient = this.ctx.createLinearGradient(-100, 0, 100, 0);
+                    const gradient = this.ctx.createLinearGradient(-200, 0, 200, 0);  // Widened gradient range for larger text
                     const time = Date.now() * 0.001;
                     gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
                     gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
                     gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
                     
                     this.ctx.fillStyle = gradient;
-                    this.ctx.font = '24px Arial';
+                    this.ctx.font = '48px Arial';  // Changed from 24px to 48px (2x bigger)
                     this.ctx.textAlign = 'center';
                     this.ctx.fillText('New Highscore!', 0, 0);
                     
