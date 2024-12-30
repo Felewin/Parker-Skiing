@@ -8,6 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <script>
         const GAME_VERSION = '1.6';
+        const CACHE_BUST = Date.now();  // Current timestamp for cache busting
         
         // Add on-screen console for mobile debugging
         /*
@@ -39,7 +40,7 @@
         });
     </script>
     <script>
-        document.write('<script src="game.js?v=' + GAME_VERSION + '"><\/script>');
+        document.write('<script src="game.js?v=' + GAME_VERSION + '&t=' + CACHE_BUST + '"><\/script>');
     </script>
     <style>
         * {
