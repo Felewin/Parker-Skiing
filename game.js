@@ -501,6 +501,11 @@ class Game {
             }
         });
 
+        // Add back the keyup handler
+        document.addEventListener('keyup', (e) => {
+            this.activeKeys.delete(e.key);
+        });
+
         // Handle touch/click input immediately
         const handleDirectionInput = (e) => {
             if (this.gameOver) {
