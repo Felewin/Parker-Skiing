@@ -10,6 +10,7 @@
         const GAME_VERSION = '1.5';
         
         // Add on-screen console for mobile debugging
+        /*
         const consoleDiv = document.createElement('div');
         consoleDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:white;padding:10px;z-index:1000;max-height:50vh;overflow-y:auto;font-family:monospace;';
         document.body.appendChild(consoleDiv);
@@ -25,6 +26,7 @@
             oldError.apply(console, args);
             consoleDiv.innerHTML += '<span style="color:#ff4444;">' + args.join(' ') + '</span><br>';
         };
+        */
 
         window.addEventListener('load', function() {
             if (!localStorage.getItem('gameVersion') || 
