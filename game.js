@@ -409,6 +409,7 @@ class Game {
     }
     
     setupEventListeners() {
+        // Handle keyboard input immediately
         document.addEventListener('keydown', (e) => {
             if (this.gameOver && this.canRestart) {
                 this.restart();
@@ -418,41 +419,44 @@ class Game {
             // Track key for easy mode movement
             this.activeKeys.add(e.key);
             
+            // Immediately respond to direction changes in normal mode
+            if (!this.easyMode) {
+                if (e.key === 'ArrowLeft') {
+                    this.direction = 'left';
+                    e.preventDefault();  // Prevent default scrolling
+                }
+                if (e.key === 'ArrowRight') {
+                    this.direction = 'right';
+                    e.preventDefault();
+                }
+            }
+            
             // Check for secret sequence
             if (e.key === 'p') {
                 this.lastPKeyTime = Date.now();
             } else if (e.key === 'k' && this.lastPKeyTime > 0) {
                 const timeSinceP = Date.now() - this.lastPKeyTime;
-                if (timeSinceP <= 5000) {  // Within 5 seconds
+                if (timeSinceP <= 5000) {
                     this.easyMode = true;
-                    this.lastPKeyTime = 0;  // Reset sequence
+                    this.lastPKeyTime = 0;
                 }
             }
-
-            // Normal mode direction changes
-            if (!this.easyMode) {
-                if (e.key === 'ArrowLeft') this.direction = 'left';
-                if (e.key === 'ArrowRight') this.direction = 'right';
-            }
         });
 
-        document.addEventListener('keyup', (e) => {
-            this.activeKeys.delete(e.key);
-        });
-        
-        // Handle both touch and click for direction changes
+        // Handle touch/click input immediately
         const handleDirectionInput = (e) => {
             if (this.gameOver) {
                 if (this.canRestart) this.restart();
                 return;
             }
             
-            // Get X coordinate from either touch or click event
+            // Get X coordinate and immediately update direction
             const x = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
             this.direction = x < window.innerWidth / 2 ? 'left' : 'right';
+            e.preventDefault();  // Prevent default behavior
         };
         
-        document.addEventListener('touchstart', handleDirectionInput);
+        document.addEventListener('touchstart', handleDirectionInput, { passive: false });
         document.addEventListener('click', handleDirectionInput);
     }
     
