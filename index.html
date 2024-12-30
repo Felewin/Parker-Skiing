@@ -3,6 +3,22 @@
 <head>
     <title>Happy Birthday Parker!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+        const GAME_VERSION = '1.2';
+        window.addEventListener('load', function() {
+            if (!localStorage.getItem('gameVersion') || 
+                localStorage.getItem('gameVersion') !== GAME_VERSION) {
+                localStorage.setItem('gameVersion', GAME_VERSION);
+                if (!window.location.hash) {
+                    window.location.reload(true);
+                }
+            }
+        });
+    </script>
+    <script src="game.js"></script>
     <style>
         * {
             user-select: none;
@@ -104,6 +120,5 @@
     <div id="birthday-text"></div>
     <div id="timer-text"></div>
     <canvas id="gameCanvas"></canvas>
-    <script src="game.js"></script>
 </body>
 </html> 

@@ -1147,7 +1147,7 @@ class Game {
             this.ctx.font = '16px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'bottom';
-            this.ctx.fillText('v1.2', 10, this.canvas.height - 10);  // Changed from v1.1 to v1.2
+            this.ctx.fillText(`v${GAME_VERSION}`, 10, this.canvas.height - 10);
             this.ctx.restore();
         } else {
             // Draw trees with conditional fade effect
@@ -1719,9 +1719,9 @@ class Game {
                 const flashProgress = (elapsed % 300) / 300;
                 const shieldAlpha = Math.sin(flashProgress * Math.PI) * this.shield.opacity;
 
-                // Draw shield circle
+                // Draw shield circle with larger radius (increased from 25 to 35)
                 this.ctx.beginPath();
-                this.ctx.arc(x, y, 25 * scale, 0, Math.PI * 2);
+                this.ctx.arc(x, y, 35 * scale, 0, Math.PI * 2);  // Changed from 25 to 35
                 this.ctx.strokeStyle = `${this.shield.color.replace('rgb', 'rgba').replace(')', `, ${shieldAlpha})`)}`;
                 this.ctx.lineWidth = 3;
                 this.ctx.stroke();
