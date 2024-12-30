@@ -1317,8 +1317,10 @@ class Game {
                 this.ctx.fillStyle = 'white';
                 this.ctx.font = '48px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText(`Score: ${this.currentScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2);
-                this.ctx.fillText(`Highscore: ${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 60);
+                this.ctx.fillText(`Score:`, this.canvas.width/2, this.canvas.height/2 - 30);
+                this.ctx.fillText(`${this.currentScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 30);
+                this.ctx.fillText(`Highscore:`, this.canvas.width/2, this.canvas.height/2 + 90);
+                this.ctx.fillText(`${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 150);
                 
                 this.ctx.restore();
                 
