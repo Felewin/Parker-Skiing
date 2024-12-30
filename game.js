@@ -112,8 +112,8 @@ class Game {
         });
         
         // Setup crash sound
-        this.crashSound = new Audio('Laser Munch.ogg');
-        this.crashSound.volume = 0.25;  // Set to 25%
+        this.crashSound = new Audio('smack.mp3');
+        this.crashSound.volume = 0.25;  // Keep same volume level
         
         // Setup snowstorm sound but don't play yet
         this.snowstormSound = new Audio('snowstorm.mp3');
@@ -351,6 +351,26 @@ class Game {
             startTime: 0,
             duration: 1000  // 1 second flash
         };
+
+        // Add shield configuration
+        this.shield = {
+            active: false,
+            startTime: 0,
+            duration: 0,
+            color: 'rgb(0, 255, 0)',  // Default green
+            opacity: 0
+        };
+        
+        // Add both powerup types
+        this.powerups = [];
+        this.powerupImg = new Image();
+        this.powerupImg.src = 'hourglass.png';
+        this.snowmanImg = new Image();
+        this.snowmanImg.src = 'snowman.png';
+        this.powerupSound = new Audio('Powerup Pickup.mp3');
+        this.shieldSound = new Audio('Powerup Bump.mp3');
+        this.powerupSound.volume = 0.25;
+        this.shieldSound.volume = 0.25;
     }
 
     setupIntroEventListeners() {
@@ -468,6 +488,8 @@ class Game {
 
         // Initialize game components
         this.spawnInitialTrees();
+
+        this.activateShield(3000, 'rgb(0, 255, 0)');  // 3 seconds, green color
     }
 
     setCanvasSize() {
@@ -855,25 +877,8 @@ class Game {
                     };
                     
                     if (this.checkCollision(playerHitbox, powerupHitbox)) {
-                        // Collect powerup
-                        powerup.fadeOut = true;
-                        this.powerupSound.currentTime = 0;
-                        this.powerupSound.play();
-                        
-                        // Subtract from start time to add 20 seconds to score
-                        this.startTime -= 20000;  // Changed from += to -=
-                        
-                        // Start timer flash
-                        this.timerFlash = {
-                            active: true,
-                            startTime: Date.now(),
-                            duration: 1000
-                        };
-                        
-                        // Create floating text
-                        this.floatingTexts.push(
-                            this.createFloatingText(this.playerX, this.playerY - 40, "+20")
-                        );
+                        // Call handlePowerupCollision instead of inline code
+                        this.handlePowerupCollision(powerup);
                     }
                 }
                 
@@ -881,8 +886,12 @@ class Game {
             });
             
             // Spawn new powerups occasionally
-            if (Math.random() < 0.002) {  // 0.2% chance per frame
-                this.powerups.push(this.createPowerup());
+            if (Math.random() < 0.004) {  // Spawn check frequency unchanged
+                const timeSinceStart = (Date.now() - this.startTime) / 1000;
+                // Only allow snowman after 5 seconds
+                const isTimeBonus = timeSinceStart < 5 ? true : Math.random() < 0.5;
+                const newPowerup = this.createPowerup(isTimeBonus);
+                this.powerups.push(newPowerup);
             }
             
             // Update floating texts
@@ -928,6 +937,7 @@ class Game {
     }
     
     checkPlayerCollision(player, tree, cornerSize) {
+        if (this.shield.active) return false;  // No collision while shield is active
         return this.checkCollision(player, tree);
     }
     
@@ -1173,44 +1183,8 @@ class Game {
             this.ctx.save();
             this.ctx.translate(this.playerX, this.playerY);
             
-            // Draw shield circle
-            if (shieldAlpha > 0) {
-                this.ctx.beginPath();
-                this.ctx.arc(0, 0, 25 * scale, 0, Math.PI * 2);
-                this.ctx.strokeStyle = `rgba(0, 255, 0, ${shieldAlpha})`;
-                this.ctx.lineWidth = 3;
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = `rgba(0, 255, 0, ${shieldAlpha * 0.3})`;
-                this.ctx.lineWidth = 6;
-                this.ctx.stroke();
-                
-                // Draw countdown numbers
-                const timeSinceStart = Date.now() - this.startAnimation.startTime;
-                const countdownTime = Math.floor(timeSinceStart / 666.67); // 2000ms / 3 numbers ≈ 666.67ms per number
-                const currentNumber = 3 - countdownTime;
-                
-                if (currentNumber >= 1 && currentNumber <= 3) {
-                    const numberProgress = (timeSinceStart % 666.67) / 666.67;
-                    
-                    // Scale from 3x to 1x size
-                    const numberScale = 3 - (2 * numberProgress);
-                    // Fade in first half, fade out second half
-                    const numberAlpha = numberProgress <= 0.5 
-                        ? numberProgress * 2 
-                        : 2 - (numberProgress * 2);
-                    
-                    this.ctx.save();
-                    this.ctx.translate(0, -80);  // Changed from -40 to -80 to position higher above player
-                    this.ctx.scale(numberScale, numberScale);
-                    this.ctx.fillStyle = `rgba(0, 255, 0, ${numberAlpha})`;
-                    this.ctx.font = '24px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText(currentNumber.toString(), 0, 0);
-                    this.ctx.restore();
-                }
-            }
+            // Draw shield if active
+            this.drawShieldEffect(0, 0, scale);
             
             // Draw player sprite
             if (this.direction === 'right') {
@@ -1218,7 +1192,6 @@ class Game {
             } else {
                 this.ctx.scale(scale, scale);
             }
-            
             this.ctx.drawImage(this.skierImg, -20, -20, 40, 40);
             this.ctx.restore();
             
@@ -1409,7 +1382,7 @@ class Game {
                 this.ctx.save();
                 this.ctx.globalAlpha = powerup.opacity;
                 this.ctx.drawImage(
-                    this.powerupImg,
+                    powerup.type === 'time' ? this.powerupImg : this.snowmanImg,  // Choose image based on type
                     powerup.x - 10,
                     powerup.y - 10,
                     20,
@@ -1692,12 +1665,14 @@ class Game {
         }
     }
 
-    createPowerup() {
+    createPowerup(forceTime = false) {
+        const isTimeBonus = forceTime || Math.random() < 0.5;  // Use forceTime parameter
         return {
             x: Math.random() * this.canvas.width,
-            y: this.canvas.height + 25,  // Start below screen
+            y: this.canvas.height + 25,
             opacity: 1,
-            fadeOut: false
+            fadeOut: false,
+            type: isTimeBonus ? 'time' : 'shield'
         };
     }
     
@@ -1722,6 +1697,86 @@ class Game {
             rotation: Math.random() * Math.PI * 2,  // Random initial rotation
             rotationSpeed: (Math.random() - 0.5) * 0.02  // Keep same rotation speed
         };
+    }
+
+    activateShield(duration, color) {
+        this.shield = {
+            active: true,
+            startTime: Date.now(),
+            duration: duration,
+            color: color,
+            opacity: 0.5
+        };
+    }
+
+    drawShieldEffect(x, y, scale) {
+        if (this.shield.active) {
+            const elapsed = Date.now() - this.shield.startTime;
+            if (elapsed < this.shield.duration) {
+                const flashProgress = (elapsed % 300) / 300;
+                const shieldAlpha = Math.sin(flashProgress * Math.PI) * this.shield.opacity;
+
+                // Draw shield circle
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 25 * scale, 0, Math.PI * 2);
+                this.ctx.strokeStyle = `${this.shield.color.replace('rgb', 'rgba').replace(')', `, ${shieldAlpha})`)}`;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+
+                this.ctx.strokeStyle = `${this.shield.color.replace('rgb', 'rgba').replace(')', `, ${shieldAlpha * 0.3})`)}`;
+                this.ctx.lineWidth = 6;
+                this.ctx.stroke();
+
+                // Draw countdown
+                const remainingSeconds = Math.ceil((this.shield.duration - elapsed) / 1000);
+                if (remainingSeconds > 0) {
+                    const numberProgress = (elapsed % 1000) / 1000;
+                    const numberScale = 3 - (2 * numberProgress);
+                    const numberAlpha = numberProgress <= 0.5 
+                        ? numberProgress * 2 
+                        : 2 - (numberProgress * 2);
+
+                    this.ctx.save();
+                    this.ctx.translate(0, -80);
+                    this.ctx.scale(numberScale, numberScale);
+                    this.ctx.fillStyle = `${this.shield.color.replace('rgb', 'rgba').replace(')', `, ${numberAlpha})`)}`;
+                    this.ctx.font = '24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(remainingSeconds.toString(), 0, 0);
+                    this.ctx.restore();
+                }
+            } else {
+                this.shield.active = false;
+            }
+        }
+    }
+
+    handlePowerupCollision(powerup) {
+        powerup.fadeOut = true;
+        
+        if (powerup.type === 'time') {
+            this.powerupSound.currentTime = 0;
+            this.powerupSound.play();
+            this.startTime -= 20000;
+            this.timerFlash.active = true;
+            this.timerFlash.startTime = Date.now();
+            this.floatingTexts.push(
+                this.createFloatingText(this.playerX, this.playerY - 40, "+20")
+            );
+        } else {  // shield type
+            this.shieldSound.currentTime = 0;
+            this.shieldSound.play();
+            
+            // If shield is already active, just refresh its duration
+            if (this.shield.active) {
+                this.shield.startTime = Date.now();  // Reset start time
+                this.shield.duration = 8000;         // Set full duration
+            } else {
+                // Otherwise activate new shield
+                this.activateShield(8000, 'rgb(0, 100, 255)');
+            }
+        }
     }
 }
 
