@@ -4,6 +4,13 @@
     <title>H'B' Parker!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
@@ -26,7 +33,45 @@
             -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,170 C150,160 300,190 450,170 C600,150 750,180 900,160 C1050,140 1200,170 1350,150 C1500,130 1650,160 1800,150 L1800,0 L0,0 Z' fill='black'/%3E%3C/svg%3E");
             mask-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,170 C150,160 300,190 450,170 C600,150 750,180 900,160 C1050,140 1200,170 1350,150 C1500,130 1650,160 1800,150 L1800,0 L0,0 Z' fill='black'/%3E%3C/svg%3E");
         }
-        #birthday-text, #timer-text {
+        #birthday-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 30vh;
+            font-size: 64px;
+            font-family: 'Arial Black', sans-serif;
+            background: linear-gradient(
+                to right,
+                #ff9aa2,
+                #ffdac1,
+                #ffffd8,
+                #b5ead7,
+                #c7ceea,
+                #e2c0ff,
+                #ff9aa2
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            background-size: 200% auto;
+            animation: rainbow-gradient 4s linear infinite;
+            z-index: 100;
+            opacity: 1;
+            /* Replace webkit-text-stroke with text-shadow outline */
+            text-shadow: 
+                -0.25px -0.25px 0 rgba(255,255,255,0.3),
+                0.25px -0.25px 0 rgba(255,255,255,0.3),
+                -0.25px 0.25px 0 rgba(255,255,255,0.3),
+                0.25px 0.25px 0 rgba(255,255,255,0.3);
+        }
+
+        @keyframes rainbow-gradient {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+
+        #timer-text {
             position: absolute;
             width: 100%;
             text-align: center;
@@ -41,17 +86,21 @@
                 -2px -2px 0 white;  /* White outline for contrast */
             z-index: 100;  /* Much higher than other elements */
             transition: opacity 0.5s;
-        }
-        #timer-text {
-            opacity: 0;  /* Start hidden */
+            opacity: 0;  /* Start hidden, will show when game starts */
         }
         .word {
             display: inline-block;
             margin: 0 10px;
+            background: inherit;
+            -webkit-background-clip: text;
+            background-clip: text;
         }
         .letter {
             display: inline-block;
             position: relative;
+            background: inherit;
+            -webkit-background-clip: text;
+            background-clip: text;
         }
         @media (max-width: 800px) {
             .word {
