@@ -30,8 +30,8 @@ class Game {
             invulnerable: true
         };
         
-        // Add base number of trees constant
-        this.baseTreeCount = 4;
+        // Increase base number of trees constant (from 4 to 20)
+        this.baseTreeCount = 20;  // Changed from 4 to 20 (5x more)
         
         // Add snow configuration
         this.snowflakes = Array(100).fill().map(() => this.createSnowflake());
@@ -159,9 +159,9 @@ class Game {
     
     // Add method to calculate tree multiplier based on time
     getTreeMultiplier() {
-        if (this.currentScore >= 120) return 3;      // After 2 minutes
-        if (this.currentScore >= 60) return 2;       // After 1 minute
-        return 1;                                    // Default
+        if (this.currentScore >= 120) return 3;      // After 2 minutes: 60 trees
+        if (this.currentScore >= 60) return 2;       // After 1 minute: 40 trees
+        return 1;                                    // Default: 20 trees
     }
     
     update() {
@@ -439,21 +439,34 @@ class Game {
                 20 * scale
             );
             
-            // Draw game over text
+            // Calculate heartbeat scale using sine wave
+            const pulseSpeed = 1.5; // Speed of pulse
+            const pulseAmount = 0.05; // Amount of scale variation (5%)
+            const pulse = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
+            
+            // Draw game over text with pulse effect
+            this.ctx.save();
+            this.ctx.translate(this.canvas.width/2, this.canvas.height/2);
+            this.ctx.scale(pulse, pulse);
+            this.ctx.translate(-this.canvas.width/2, -this.canvas.height/2);
+            
             this.ctx.fillStyle = 'white';
             this.ctx.font = '48px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(`Score: ${this.currentScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2);
             this.ctx.fillText(`High Score: ${this.highScore.toFixed(2)}s`, this.canvas.width/2, this.canvas.height/2 + 60);
             
+            this.ctx.restore();
+            
+            // Draw restart text without pulse
             if (this.canRestart) {
                 this.ctx.font = '24px Arial';
                 this.ctx.fillText('Touch anything to restart', this.canvas.width/2, this.canvas.height/2 + 120);
             }
         }
         
-        // Draw snowflakes
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        // Draw snowflakes with lighter opacity
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         this.snowflakes.forEach(snow => {
             this.ctx.beginPath();
             this.ctx.arc(snow.x, snow.y, snow.size, 0, Math.PI * 2);
