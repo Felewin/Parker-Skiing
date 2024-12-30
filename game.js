@@ -854,9 +854,9 @@ class Game {
                 for (const tree of this.trees) {
                     const treeHitbox = {
                         x: tree.x - 2.5,
-                        y: tree.y + 10,
+                        y: tree.y + 13,  // Start 3 pixels lower (70% of bottom portion)
                         width: 5,
-                        height: 10
+                        height: 7  // Reduced from 10 to 7 (70% of original)
                     };
                     
                     if (this.checkPlayerCollision(playerBaseHitbox, treeHitbox, cornerSize)) {
@@ -1286,9 +1286,9 @@ class Game {
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(
                         collidedTree.x - 2.5,
-                        collidedTree.y + 10,
+                        collidedTree.y + 13,  // Updated to match new hitbox
                         5,
-                        10
+                        7  // Updated to match new hitbox
                     );
                 }
                 
