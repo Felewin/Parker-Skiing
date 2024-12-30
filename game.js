@@ -38,12 +38,44 @@ class Game {
         
         // Setup timer text reference but keep it hidden
         this.timerText = document.getElementById('timer-text');
+        
+        this.restartTextStartTime = 0;  // Track when restart text appears
+        
+        // Setup skiing sound
+        this.skiingSound = new Audio('Skiing.ogg');
+        this.skiingSound.loop = true;
+        this.skiingSound.volume = 0.25;  // Set to 25%
+        
+        // Setup crash sound
+        this.crashSound = new Audio('Laser Munch.ogg');
+        this.crashSound.volume = 0.25;  // Set to 25%
+        
+        // Setup snowstorm sound but don't play yet
+        this.snowstormSound = new Audio('snowstorm.mp3');
+        this.snowstormSound.loop = true;
+        this.snowstormSound.volume = 0.25;
+
+        // Add error handling and logging
+        this.snowstormSound.addEventListener('error', (e) => {
+            console.error('Error loading snowstorm sound:', e);
+        });
+
+        this.snowstormSound.addEventListener('canplaythrough', () => {
+            console.log('Snowstorm sound loaded successfully');
+            this.snowstormSound.play().catch(e => {
+                console.error('Error playing snowstorm sound:', e);
+            });
+        });
     }
 
     setupIntroEventListeners() {
         const startGame = () => {
             if (this.isIntroScreen) {
                 this.isIntroScreen = false;
+                
+                // Start both skiing and snowstorm sounds when game starts
+                this.skiingSound.play();
+                this.snowstormSound.play();  // Now it will work because user has interacted
                 
                 // Hide birthday text and show timer when starting game
                 this.birthdayText.style.opacity = '0';
@@ -262,7 +294,12 @@ class Game {
                 }
             });
         } else {
-            if (this.gameOver) return;
+            if (this.gameOver) {
+                // Stop skiing sound when game is over
+                this.skiingSound.pause();
+                this.skiingSound.currentTime = 0;
+                return;
+            }
             
             this.currentScore = (Date.now() - this.startTime) / 1000;
             
@@ -342,8 +379,14 @@ class Game {
                         this.gameOver = true;
                         this.canRestart = false;
                         this.highScore = Math.max(this.highScore, this.currentScore);
+                        
+                        // Play crash sound
+                        this.crashSound.currentTime = 0;  // Reset sound to start
+                        this.crashSound.play();
+                        
                         setTimeout(() => {
                             this.canRestart = true;
+                            this.restartTextStartTime = Date.now();
                         }, 1000);
                         break;
                     }
@@ -537,25 +580,38 @@ class Game {
                 this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // Draw collision boxes only during game over and only for trees not fully above player
-                this.trees.forEach(tree => {
-                    const treeBottom = tree.y + 30;  // Bottom of tree sprite (including collision box)
-                    const playerTop = this.playerY - 20;  // Top of player hitbox
-                    
-                    // Only draw collision box if any part of tree is at or below player's top
-                    if (treeBottom > playerTop) {
-                        this.ctx.strokeStyle = 'red';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(
-                            tree.x - 2.5,
-                            tree.y + 10,
-                            5,
-                            10
-                        );
-                    }
+                // Find the tree that caused the collision
+                const collidedTree = this.trees.find(tree => {
+                    const treeHitbox = {
+                        x: tree.x - 2.5,
+                        y: tree.y + 10,
+                        width: 5,
+                        height: 10
+                    };
+                    return this.checkPlayerCollision(
+                        {
+                            x: this.playerX - 20,
+                            y: this.playerY,
+                            width: 40,
+                            height: 20
+                        },
+                        treeHitbox
+                    );
                 });
+
+                // Only draw collision box for the tree that caused game over
+                if (collidedTree) {
+                    this.ctx.strokeStyle = 'red';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(
+                        collidedTree.x - 2.5,
+                        collidedTree.y + 10,
+                        5,
+                        10
+                    );
+                }
                 
-                // Draw player collision box (now only bottom half)
+                // Draw player collision box
                 this.ctx.strokeStyle = 'blue';
                 this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(
@@ -586,8 +642,43 @@ class Game {
                 
                 // Draw restart text without pulse
                 if (this.canRestart) {
+                    const timeSinceRestart = Date.now() - this.restartTextStartTime;
+                    const bounceProgress = Math.min(timeSinceRestart / 500, 1); // 0.5 seconds bounce
+                    
+                    // Elastic bounce effect (same as player)
+                    const c4 = (2 * Math.PI) / 3;
+                    let bounceScale = bounceProgress === 1 
+                        ? 1
+                        : bounceProgress === 0
+                        ? 0
+                        : Math.pow(2, -10 * bounceProgress) * Math.sin((bounceProgress * 10 - 0.75) * c4) + 1;
+                    
+                    // After bounce, do breathing effect
+                    const pulseSpeed = 1.5;
+                    const pulseAmount = 0.05;
+                    const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
+                    
+                    // Combine scales, but only apply breathing after bounce is complete
+                    const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                    
+                    // Create gradient text
+                    this.ctx.save();
+                    this.ctx.translate(this.canvas.width/2, this.canvas.height/2 + 120);
+                    this.ctx.scale(finalScale, finalScale);
+                    
+                    // Create gradient
+                    const gradient = this.ctx.createLinearGradient(-100, 0, 100, 0);
+                    const time = Date.now() * 0.001;
+                    gradient.addColorStop(0, `hsl(${(time * 50) % 360}, 70%, 80%)`);
+                    gradient.addColorStop(0.5, `hsl(${(time * 50 + 120) % 360}, 70%, 80%)`);
+                    gradient.addColorStop(1, `hsl(${(time * 50 + 240) % 360}, 70%, 80%)`);
+                    
+                    this.ctx.fillStyle = gradient;
                     this.ctx.font = '24px Arial';
-                    this.ctx.fillText('Touch anything to restart', this.canvas.width/2, this.canvas.height/2 + 120);
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Touch anything to restart', 0, 0);
+                    
+                    this.ctx.restore();
                 }
             }
             
@@ -603,6 +694,10 @@ class Game {
     
     restart() {
         if (!this.canRestart) return;
+        
+        // Start skiing sound again on restart
+        this.skiingSound.play();
+        
         this.gameOver = false;
         this.canRestart = false;
         this.trees = [];
