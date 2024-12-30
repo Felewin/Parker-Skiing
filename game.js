@@ -404,10 +404,10 @@ class Game {
         // Add snow configuration
         this.snowflakes = Array(100).fill().map(() => this.createSnowflake());
         
-        // Add large snowflake configuration for intro
+        // Add large snowflake configuration for gameplay too
         this.largeSnowflakes = Array(15).fill().map(() => this.createLargeSnowflake());
         
-        // Add extra-large snowflake configuration for intro
+        // Add extra-large snowflake configuration for gameplay too
         this.extraLargeSnowflakes = Array(8).fill().map(() => this.createExtraLargeSnowflake());
         
         // Add star configuration
@@ -714,6 +714,56 @@ class Game {
                 
                 // Remove confetti that's fallen off screen
                 return conf.y < this.canvas.height + 20;
+            });
+
+            // Update large snowflakes
+            this.largeSnowflakes.forEach(snow => {
+                const diagonalSpeed = snow.speed;
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * diagonalSpeed;
+                    snow.y += verticalSpeed * diagonalSpeed;
+                } else {
+                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
+                    snow.y -= diagonalSpeed;
+                }
+                
+                if (snow.y < -20) {
+                    snow.y = this.canvas.height + 20;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 20) {
+                    snow.y = -20;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                if (snow.x < -20) {
+                    snow.x = this.canvas.width + 20;
+                } else if (snow.x > this.canvas.width + 20) {
+                    snow.x = -20;
+                }
+            });
+
+            // Update extra-large snowflakes
+            this.extraLargeSnowflakes.forEach(snow => {
+                const diagonalSpeed = snow.speed;
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * diagonalSpeed;
+                    snow.y += verticalSpeed * diagonalSpeed;
+                } else {
+                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
+                    snow.y -= diagonalSpeed;
+                }
+                
+                if (snow.y < -30) {
+                    snow.y = this.canvas.height + 30;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 30) {
+                    snow.y = -30;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                if (snow.x < -30) {
+                    snow.x = this.canvas.width + 30;
+                } else if (snow.x > this.canvas.width + 30) {
+                    snow.x = -30;
+                }
             });
         }
     }
