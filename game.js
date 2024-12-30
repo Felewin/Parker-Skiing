@@ -257,6 +257,25 @@ class Game {
             invulnerable: true,
             countdownNumber: 3  // Start at 3
         };
+
+        // Add tab visibility tracking
+        this.isTabVisible = true;
+        this.lastVisibleTime = Date.now();
+        
+        // Listen for visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.isTabVisible = false;
+            } else {
+                this.isTabVisible = true;
+                // Update the start time to account for time spent in background
+                if (!this.isIntroScreen && !this.gameOver) {
+                    const timeInBackground = Date.now() - this.lastVisibleTime;
+                    this.startTime += timeInBackground;
+                }
+            }
+            this.lastVisibleTime = Date.now();
+        });
     }
 
     setupIntroEventListeners() {
@@ -518,7 +537,11 @@ class Game {
                 return;
             }
             
-            this.currentScore = (Date.now() - this.startTime) / 1000;
+            // Only update score if tab is visible
+            if (this.isTabVisible) {
+                this.currentScore = (Date.now() - this.startTime) / 1000;
+                this.lastVisibleTime = Date.now();
+            }
             
             // Check if start animation and invulnerability should end
             const timeSinceStart = Date.now() - this.startAnimation.startTime;
