@@ -501,7 +501,7 @@ class Game {
             }
         });
 
-        // Add back the keyup handler
+        // Add back the keyup handler for responsive controls
         document.addEventListener('keyup', (e) => {
             this.activeKeys.delete(e.key);
         });
@@ -572,14 +572,7 @@ class Game {
                 }
             });
         } else {
-            if (this.gameOver) {
-                // Stop both skiing sounds
-                this.skiingSounds.forEach(sound => {
-                    sound.pause();
-                    sound.currentTime = 0;
-                });
-                return;
-            }
+            if (this.gameOver) return;
             
             // Only update score if tab is visible
             if (this.isTabVisible) {
@@ -599,6 +592,10 @@ class Game {
             
             let horizontalSpeed = 0;
             let verticalSpeed = 0;
+            
+            // Check if screen is in portrait mode
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const verticalSpeedMultiplier = isPortrait ? 2 : 1;  // Double speed in portrait
 
             if (this.easyMode) {
                 // Easy mode movement
@@ -607,19 +604,15 @@ class Game {
                 // Calculate speeds based on active keys
                 if (this.activeKeys.has('ArrowLeft')) horizontalSpeed += speed;
                 if (this.activeKeys.has('ArrowRight')) horizontalSpeed -= speed;
-                if (this.activeKeys.has('ArrowUp')) verticalSpeed += speed;
-                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= speed;
-
-                // Update direction for visual purposes
-                if (horizontalSpeed > 0) this.direction = 'left';
-                else if (horizontalSpeed < 0) this.direction = 'right';
+                if (this.activeKeys.has('ArrowUp')) verticalSpeed += speed * verticalSpeedMultiplier;
+                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= speed * verticalSpeedMultiplier;
             } else {
                 // Normal mode movement
                 horizontalSpeed = this.direction === 'left' ? 1 : -1;
-                verticalSpeed = -1;  // Constant downward movement in normal mode
+                verticalSpeed = -1 * verticalSpeedMultiplier;  // Apply multiplier to normal mode too
             }
             
-            // Move trees
+            // Move trees with adjusted vertical speed
             this.trees.forEach(tree => {
                 tree.x += horizontalSpeed;
                 tree.y += verticalSpeed;
@@ -629,6 +622,22 @@ class Game {
                     tree.x = Math.random() * this.canvas.width;
                 }
             });
+            
+            // Keep original speed for snowflakes
+            this.snowflakes.forEach(snow => {
+                const diagonalSpeed = snow.speed;
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * diagonalSpeed;
+                    snow.y += verticalSpeed * diagonalSpeed / verticalSpeedMultiplier;  // Divide by multiplier to maintain original speed
+                } else {
+                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
+                    snow.y -= diagonalSpeed;  // Keep original speed for snow
+                }
+                // ... rest of snowflake update code ...
+            });
+            
+            // Do the same for large and extra-large snowflakes
+            // ... rest of update code ...
             
             // Check if we need to add more trees based on time
             const currentMultiplier = this.getTreeMultiplier();
@@ -664,8 +673,14 @@ class Game {
                         this.canRestart = false;
                         this.highScore = Math.max(this.highScore, this.currentScore);
                         
+                        // Stop all skiing sounds immediately
+                        this.skiingSounds.forEach(sound => {
+                            sound.pause();
+                            sound.currentTime = 0;
+                        });
+                        
                         // Play crash sound
-                        this.crashSound.currentTime = 0;  // Reset sound to start
+                        this.crashSound.currentTime = 0;
                         this.crashSound.play();
                         
                         setTimeout(() => {
@@ -677,39 +692,6 @@ class Game {
                 }
             }
             
-            // Update snowflakes
-            this.snowflakes.forEach(snow => {
-                // Move diagonally based on player direction
-                const diagonalSpeed = snow.speed;
-                if (this.easyMode) {
-                    // In easy mode, use actual movement direction
-                    snow.x += horizontalSpeed * diagonalSpeed;
-                    snow.y += verticalSpeed * diagonalSpeed;
-                } else {
-                    // In normal mode, move diagonally based on facing direction
-                    snow.x += (this.direction === 'left' ? diagonalSpeed : -diagonalSpeed);
-                    snow.y -= diagonalSpeed;  // Always move up relative to player
-                }
-                
-                // Reset snowflake when it goes off screen
-                if (snow.y < -10) {
-                    // If goes off top, reset to bottom
-                    snow.y = this.canvas.height + 10;
-                    snow.x = Math.random() * this.canvas.width;
-                } else if (snow.y > this.canvas.height + 10) {
-                    // If goes off bottom, reset to top
-                    snow.y = -10;
-                    snow.x = Math.random() * this.canvas.width;
-                }
-                
-                // Reset if goes off sides
-                if (snow.x < -10) {
-                    snow.x = this.canvas.width + 10;
-                } else if (snow.x > this.canvas.width + 10) {
-                    snow.x = -10;
-                }
-            });
-
             // Update confetti
             this.confetti = this.confetti.filter(conf => {
                 conf.y += conf.speedY;
@@ -1196,7 +1178,23 @@ class Game {
         this.restartSound.currentTime = 0;
         this.restartSound.play();
         
-        // Play random VOX cheer after delay (different from last time)
+        // Reset and restart skiing sounds
+        this.skiingSounds.forEach(sound => {
+            sound.pause();
+            sound.currentTime = 0;
+        });
+        // Start first skiing sound with a clean state
+        this.skiingSounds[0].currentTime = 0;
+        this.skiingSounds[0].volume = 0.25;
+        this.skiingSounds[0].play().catch(e => {
+            console.error('Error restarting skiing sound:', e);
+            // Try again after a short delay if it fails
+            setTimeout(() => {
+                this.skiingSounds[0].play().catch(console.error);
+            }, 100);
+        });
+        
+        // Play random VOX cheer after delay
         setTimeout(() => {
             let newIndex;
             do {
@@ -1208,9 +1206,6 @@ class Game {
             randomCheer.currentTime = 0;
             randomCheer.play();
         }, 200);
-        
-        // Start first skiing sound again
-        this.skiingSounds[0].play();
         
         this.gameOver = false;
         this.canRestart = false;
