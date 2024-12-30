@@ -950,6 +950,15 @@ class Game {
                 this.ctx.fillText(`${Math.floor(this.loadingProgress * 100)}%`, 
                     this.canvas.width / 2, barY + barHeight + 25);
             }
+
+            // Draw version number in bottom left
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';  // Semi-transparent white
+            this.ctx.font = '16px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'bottom';
+            this.ctx.fillText('v1.0', 10, this.canvas.height - 10);  // 10px padding from edges
+            this.ctx.restore();
         } else {
             // Draw trees with conditional fade effect
             this.trees.forEach(tree => {
