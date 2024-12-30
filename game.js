@@ -135,8 +135,8 @@ class Game {
         // Setup crowd cheering sounds
         this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf_01.mp3');
         this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf_01.mp3');
-        this.cheerSound1.volume = 0.25;
-        this.cheerSound2.volume = 0.25;
+        this.cheerSound1.volume = 0.35;  // Increased from 0.25 to 0.35 (140% as loud)
+        this.cheerSound2.volume = 0.35;  // Increased from 0.25 to 0.35 (140% as loud)
 
         // Setup VOX cheer sounds
         this.voxCheers = [
@@ -145,7 +145,7 @@ class Game {
             new Audio('Falstad_VOX_Cheer04.ogg'),
             new Audio('Falstad_VOX_Cheer05.ogg')
         ];
-        this.voxCheers.forEach(sound => sound.volume = 0.175);  // Changed from 0.25 to 0.175 (70% as loud)
+        this.voxCheers.forEach(sound => sound.volume = 0.114);  // Changed from 0.175 to 0.114 (65% as loud)
         this.lastPlayedVoxIndex = -1;  // Track last played VOX sound
 
         // Setup confetti
