@@ -7,7 +7,25 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <script>
-        const GAME_VERSION = '1.4';
+        const GAME_VERSION = '1.5';
+        
+        // Add on-screen console for mobile debugging
+        const consoleDiv = document.createElement('div');
+        consoleDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:white;padding:10px;z-index:1000;max-height:50vh;overflow-y:auto;font-family:monospace;';
+        document.body.appendChild(consoleDiv);
+        
+        // Override console methods
+        const oldLog = console.log;
+        const oldError = console.error;
+        console.log = function(...args) {
+            oldLog.apply(console, args);
+            consoleDiv.innerHTML += '<span style="color:white;">' + args.join(' ') + '</span><br>';
+        };
+        console.error = function(...args) {
+            oldError.apply(console, args);
+            consoleDiv.innerHTML += '<span style="color:#ff4444;">' + args.join(' ') + '</span><br>';
+        };
+
         window.addEventListener('load', function() {
             if (!localStorage.getItem('gameVersion') || 
                 localStorage.getItem('gameVersion') !== GAME_VERSION) {

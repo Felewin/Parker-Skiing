@@ -158,10 +158,20 @@ class Game {
         this.introMusic = new Audio('Blue Sky.mp3');
         this.introMusic.volume = 0.25;
         this.introMusic.loop = true;
+        this.introMusic.addEventListener('error', (e) => {
+            console.error('Intro music error:', e);
+            // Try to recover
+            this.introMusic.currentTime = 0;
+            this.introMusic.load();
+        });
+        this.introMusic.addEventListener('play', () => {
+            console.log('Intro music started playing');
+        });
         this.introMusic.addEventListener('ended', () => {
             if (this.isIntroScreen) {  // Only restart if still in intro
+                console.log('Intro music ended, attempting to restart');
                 this.introMusic.currentTime = 0;
-                this.introMusic.play();
+                this.introMusic.play().catch(e => console.error('Error restarting intro music:', e));
             }
         });
         
@@ -240,7 +250,17 @@ class Game {
             if (this.showLoadingText) {
                 this.showLoadingText = false;
                 this.showIntroText = false;  // Don't show play text yet
-                this.introMusic.play();
+                this.introMusic.play().catch(e => {
+                    console.error('Error playing intro music:', e);
+                    // On mobile, we might need to try again on the next user interaction
+                    const retryPlay = () => {
+                        this.introMusic.play().catch(console.error);
+                        document.removeEventListener('touchstart', retryPlay);
+                        document.removeEventListener('click', retryPlay);
+                    };
+                    document.addEventListener('touchstart', retryPlay);
+                    document.addEventListener('click', retryPlay);
+                });
                 
                 // Start snowstorm with fade in
                 this.snowstormSound.volume = 0;  // Start silent
