@@ -152,7 +152,7 @@ class Game {
         for (let i = 0; i < treeCount; i++) {
             this.trees.push({
                 x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height + this.canvas.height * 0.3
+                y: (Math.random() * this.canvas.height * 0.7) + (this.canvas.height * 0.3)
             });
         }
     }
@@ -219,7 +219,7 @@ class Game {
         while (this.trees.length < desiredTreeCount) {
             this.trees.push({
                 x: Math.random() * this.canvas.width,
-                y: this.canvas.height + Math.random() * 50
+                y: this.canvas.height + (Math.random() * 100 - 50)
             });
         }
         
