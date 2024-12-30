@@ -42,9 +42,35 @@ class Game {
         this.restartTextStartTime = 0;  // Track when restart text appears
         
         // Setup skiing sound
-        this.skiingSound = new Audio('Skiing.mp3');
-        this.skiingSound.loop = true;
-        this.skiingSound.volume = 0.25;  // Set to 25%
+        this.skiingSounds = [
+            new Audio('Skiing.mp3'),
+            new Audio('Skiing.mp3')
+        ];
+        this.skiingSounds.forEach(sound => {
+            sound.volume = 0;  // Start at 0 volume
+            sound.addEventListener('timeupdate', () => {
+                // Start crossfade when 1 second from the end (0.5s fade out + 0.5s fade in)
+                if (sound.currentTime > sound.duration - 1) {
+                    const otherSound = this.skiingSounds.find(s => s !== sound);
+                    
+                    // Start the other sound if it's not already playing
+                    if (otherSound.paused) {
+                        otherSound.currentTime = 0;
+                        otherSound.volume = 0;
+                        otherSound.play();
+                    }
+                    
+                    // Calculate fade based on remaining time
+                    const timeLeft = sound.duration - sound.currentTime;
+                    if (timeLeft <= 0.5) {  // Last 0.5 seconds - fade out current
+                        sound.volume = Math.min(0.25 * (timeLeft / 0.5), 0.25);
+                    }
+                    if (timeLeft <= 1 && timeLeft > 0.5) {  // 0.5-1 seconds left - fade in next
+                        otherSound.volume = Math.min(0.25 * (1 - (timeLeft / 0.5)), 0.25);
+                    }
+                }
+            });
+        });
         
         // Setup crash sound
         this.crashSound = new Audio('Laser Munch.ogg');
@@ -121,73 +147,78 @@ class Game {
         // Add loading progress tracking
         this.loadingProgress = 0;
         this.loadingStartTime = 0;
-        this.LOADING_DURATION = 6000;  // Changed from 7000 to 6000 (6 seconds)
+        this.LOADING_DURATION = 4620;  // Changed from 6000 to 4800 (4/5 of original)
         
         // Add PK sequence tracking for intro screen
         this.lastPKeyTimeIntro = 0;
         
         // Modify first interaction listener
         const showIntroText = (e) => {
-            // Check for PK sequence in intro
-            if (e.key === 'p') {
-                this.lastPKeyTimeIntro = Date.now();
-            } else if (e.key === 'k' && this.lastPKeyTimeIntro > 0) {
-                const timeSinceP = Date.now() - this.lastPKeyTimeIntro;
-                if (timeSinceP <= 5000) {  // Within 5 seconds
-                    // Skip loading and start game immediately
-                    this.showLoadingText = false;
-                    this.showIntroText = true;
-                    this.introTextStartTime = Date.now();
-                    this.introMusic.play();
-                    
-                    // Start game after brief delay
-                    setTimeout(() => {
-                        // Fade out intro music
-                        const fadeOut = () => {
-                            if (this.introMusic.volume > 0.01) {
-                                this.introMusic.volume = Math.max(0, this.introMusic.volume - 0.01);
-                                setTimeout(fadeOut, 40);
-                            } else {
-                                this.introMusic.pause();
-                                this.introMusic.currentTime = 0;
-                            }
-                        };
-                        fadeOut();
+            // Only process keyboard events for PK sequence
+            if (e.type === 'keydown') {
+                if (e.key === 'p') {
+                    this.lastPKeyTimeIntro = Date.now();
+                } else if (e.key === 'k' && this.lastPKeyTimeIntro > 0) {
+                    const timeSinceP = Date.now() - this.lastPKeyTimeIntro;
+                    if (timeSinceP <= 5000) {
+                        // Skip loading and start game immediately
+                        this.showLoadingText = false;
+                        this.showIntroText = true;
+                        this.introTextStartTime = Date.now();
+                        this.introMusic.play();
                         
-                        this.isIntroScreen = false;
-                        this.createConfetti();
+                        // Start game after brief delay
+                        setTimeout(() => {
+                            // Fade out intro music
+                            const fadeOut = () => {
+                                if (this.introMusic.volume > 0.01) {
+                                    this.introMusic.volume = Math.max(0, this.introMusic.volume - 0.01);
+                                    setTimeout(fadeOut, 40);
+                                } else {
+                                    this.introMusic.pause();
+                                    this.introMusic.currentTime = 0;
+                                }
+                            };
+                            fadeOut();
+                            
+                            this.isIntroScreen = false;
+                            this.createConfetti();
+                            
+                            // Play random cheer
+                            const cheerSound = Math.random() < 0.5 ? this.cheerSound1 : this.cheerSound2;
+                            cheerSound.currentTime = 0;
+                            cheerSound.play();
+                            
+                            this.skiingSounds[0].play();
+                            this.snowstormSound.play();
+                            
+                            this.birthdayText.style.opacity = '0';
+                            this.timerText.style.opacity = '1';
+                            
+                            this.initializeGame();
+                            this.setupEventListeners();
+                        }, 500);
                         
-                        // Play random cheer
-                        const cheerSound = Math.random() < 0.5 ? this.cheerSound1 : this.cheerSound2;
-                        cheerSound.currentTime = 0;
-                        cheerSound.play();
-                        
-                        this.skiingSound.play();
-                        this.snowstormSound.play();
-                        
-                        this.birthdayText.style.opacity = '0';
-                        this.timerText.style.opacity = '1';
-                        
-                        this.initializeGame();
-                        this.setupEventListeners();
-                    }, 500);
-                    
-                    // Remove intro listeners
-                    document.removeEventListener('keydown', showIntroText);
-                    document.removeEventListener('click', showIntroText);
-                    document.removeEventListener('touchstart', showIntroText);
-                    return;
+                        // Remove intro listeners
+                        document.removeEventListener('keydown', showIntroText);
+                        document.removeEventListener('click', showIntroText);
+                        document.removeEventListener('touchstart', showIntroText);
+                        return;
+                    }
                 }
+                return;  // Ignore all other keyboard events
             }
             
-            // Normal intro sequence if not PK
+            // Normal intro sequence for mouse/touch only
             if (this.showLoadingText) {
                 this.showLoadingText = false;
-                this.showIntroText = true;
+                this.showIntroText = false;  // Don't show play text yet
                 this.introMusic.play();
                 this.loadingStartTime = Date.now();
                 
+                // Set timer to show "Touch to play" after loading completes
                 setTimeout(() => {
+                    this.showIntroText = true;
                     this.introTextStartTime = Date.now();
                 }, this.LOADING_DURATION);
                 
@@ -198,9 +229,21 @@ class Game {
             }
         };
         
+        // Setup game start listener
+        const startGame = (e) => {
+            // Only start game if loading is complete and intro text is showing
+            if (this.isIntroScreen && this.showIntroText && this.introTextStartTime > 0) {
+                // ... game start code ...
+            }
+        };
+        
         document.addEventListener('keydown', showIntroText);
         document.addEventListener('click', showIntroText);
         document.addEventListener('touchstart', showIntroText);
+        
+        document.addEventListener('keydown', startGame);
+        document.addEventListener('click', startGame);
+        document.addEventListener('touchstart', startGame);
     }
 
     setupIntroEventListeners() {
@@ -228,9 +271,8 @@ class Game {
                 cheerSound.currentTime = 0;
                 cheerSound.play();
                 
-                // Start both skiing and snowstorm sounds when game starts
-                this.skiingSound.play();
-                this.snowstormSound.play();
+                // Start first skiing sound
+                this.skiingSounds[0].play();
                 
                 // Hide birthday text and show timer when starting game
                 this.birthdayText.style.opacity = '0';
@@ -450,9 +492,11 @@ class Game {
             });
         } else {
             if (this.gameOver) {
-                // Stop skiing sound when game is over
-                this.skiingSound.pause();
-                this.skiingSound.currentTime = 0;
+                // Stop both skiing sounds
+                this.skiingSounds.forEach(sound => {
+                    sound.pause();
+                    sound.currentTime = 0;
+                });
                 return;
             }
             
@@ -654,7 +698,7 @@ class Game {
                 const timeSinceLoading = Date.now() - this.loadingTextStartTime;
                 const bounceProgress = Math.min(timeSinceLoading / 500, 1);
                 
-                // Same elastic bounce effect
+                // Elastic bounce effect
                 const c4 = (2 * Math.PI) / 3;
                 let bounceScale = bounceProgress === 1 
                     ? 1
@@ -662,12 +706,16 @@ class Game {
                     ? 0
                     : Math.pow(2, -10 * bounceProgress) * Math.sin((bounceProgress * 10 - 0.75) * c4) + 1;
                 
-                // Same breathing effect
+                // Breathing effect
                 const pulseSpeed = 1.5;
                 const pulseAmount = 0.05;
                 const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
                 
-                const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                // Blend between bounce and breathing based on bounce progress
+                const blendFactor = Math.min((bounceProgress - 0.8) / 0.2, 1); // Start blend at 80% of bounce
+                const finalScale = bounceProgress < 0.8 
+                    ? bounceScale 
+                    : bounceScale * (1 - blendFactor) + breatheScale * blendFactor;
                 
                 // Draw with same gradient style
                 this.ctx.save();
@@ -693,7 +741,7 @@ class Game {
                 const timeSinceIntroText = Date.now() - this.introTextStartTime;
                 const bounceProgress = Math.min(timeSinceIntroText / 500, 1); // 0.5 seconds bounce
                 
-                // Elastic bounce effect (same as restart text)
+                // Elastic bounce effect
                 const c4 = (2 * Math.PI) / 3;
                 let bounceScale = bounceProgress === 1 
                     ? 1
@@ -701,13 +749,16 @@ class Game {
                     ? 0
                     : Math.pow(2, -10 * bounceProgress) * Math.sin((bounceProgress * 10 - 0.75) * c4) + 1;
                 
-                // After bounce, do breathing effect
+                // Breathing effect
                 const pulseSpeed = 1.5;
                 const pulseAmount = 0.05;
                 const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
                 
-                // Combine scales, but only apply breathing after bounce is complete
-                const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                // Blend between bounce and breathing based on bounce progress
+                const blendFactor = Math.min((bounceProgress - 0.8) / 0.2, 1); // Start blend at 80% of bounce
+                const finalScale = bounceProgress < 0.8 
+                    ? bounceScale 
+                    : bounceScale * (1 - blendFactor) + breatheScale * blendFactor;
                 
                 // Create gradient text
                 this.ctx.save();
@@ -928,8 +979,11 @@ class Game {
                     const pulseAmount = 0.05;
                     const breatheScale = 1 + (Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount);
                     
-                    // Combine scales, but only apply breathing after bounce is complete
-                    const finalScale = bounceProgress < 1 ? bounceScale : breatheScale;
+                    // Blend between bounce and breathing based on bounce progress
+                    const blendFactor = Math.min((bounceProgress - 0.8) / 0.2, 1); // Start blend at 80% of bounce
+                    const finalScale = bounceProgress < 0.8 
+                        ? bounceScale 
+                        : bounceScale * (1 - blendFactor) + breatheScale * blendFactor;
                     
                     // Create gradient text
                     this.ctx.save();
@@ -993,8 +1047,8 @@ class Game {
             randomCheer.play();
         }, 200);
         
-        // Start skiing sound again on restart
-        this.skiingSound.play();
+        // Start first skiing sound again
+        this.skiingSounds[0].play();
         
         this.gameOver = false;
         this.canRestart = false;
