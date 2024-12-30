@@ -318,6 +318,39 @@ class Game {
                 }
             }
         }, 3000);  // Check every 3 seconds
+
+        // Add collision particles array
+        this.collisionParticles = [];
+
+        // Add screen shake configuration
+        this.screenShake = {
+            active: false,
+            startTime: 0,
+            duration: 400,  // 400ms shake
+            intensity: 15   // Maximum shake offset in pixels
+        };
+
+        // Add powerup configuration
+        this.powerups = [];
+        this.powerupImg = new Image();
+        this.powerupImg.src = 'hourglass.png';
+        this.powerupSound = new Audio('Powerup Pickup.mp3');
+        this.powerupSound.volume = 0.25;
+        
+        // Add floating text configuration
+        this.floatingTexts = [];
+        
+        // Add timer flash state
+        this.timerFlash = {
+            active: false,
+            startTime: 0,
+            duration: 1000  // 1 second flash
+        };
+
+        // Add super large snowflake configuration
+        this.superSnowflakes = Array(4).fill().map(() => this.createSuperSnowflake());
+        this.snowflakeImg = new Image();
+        this.snowflakeImg.src = 'snowflake.png';
     }
 
     setupIntroEventListeners() {
@@ -544,6 +577,12 @@ class Game {
     }
     
     update() {
+        // Define these at the top of update method
+        let horizontalSpeed = 0;
+        let verticalSpeed = 0;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const verticalSpeedMultiplier = isPortrait ? 2 : 1;
+
         if (this.isIntroScreen) {
             // Update regular snowflakes
             this.snowflakes.forEach(snow => {
@@ -571,8 +610,30 @@ class Game {
                     snow.x = Math.random() * this.canvas.width;
                 }
             });
+            
+            // Update super snowflakes in intro mode
+            this.superSnowflakes.forEach(snow => {
+                // In intro screen, just fall straight down
+                snow.y += snow.speed;
+                snow.rotation += snow.rotationSpeed;
+                
+                // Reset position when off screen
+                if (snow.y > this.canvas.height + 50) {
+                    snow.y = -50;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+            });
         } else {
-            if (this.gameOver) return;
+            if (this.gameOver) {
+                // Update collision particles even during game over
+                this.collisionParticles = this.collisionParticles.filter(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.life -= 0.02;  // Reduced from 0.05 to fade out slower
+                    return particle.life > 0;
+                });
+                return;  // Skip other updates
+            }
             
             // Only update score if tab is visible
             if (this.isTabVisible) {
@@ -590,13 +651,6 @@ class Game {
                 this.startAnimation.scaleComplete = true;
             }
             
-            let horizontalSpeed = 0;
-            let verticalSpeed = 0;
-            
-            // Check if screen is in portrait mode
-            const isPortrait = window.innerHeight > window.innerWidth;
-            const verticalSpeedMultiplier = isPortrait ? 2 : 1;  // Double speed in portrait
-
             if (this.easyMode) {
                 // Easy mode movement
                 const speed = 1;
@@ -734,6 +788,9 @@ class Game {
                     };
                     
                     if (this.checkPlayerCollision(playerBaseHitbox, treeHitbox, cornerSize)) {
+                        // Create collision effect at impact point
+                        this.createCollisionEffect(tree.x, tree.y + 15);
+                        
                         this.gameOver = true;
                         this.canRestart = false;
                         this.highScore = Math.max(this.highScore, this.currentScore);
@@ -767,7 +824,99 @@ class Game {
                 // Remove confetti that's fallen off screen
                 return conf.y < this.canvas.height + 20;
             });
+            
+            // Update powerups
+            this.powerups = this.powerups.filter(powerup => {
+                // Move powerup with game movement
+                powerup.x += horizontalSpeed;
+                powerup.y += verticalSpeed;
+                
+                // Handle fade out
+                if (powerup.fadeOut) {
+                    powerup.opacity -= 0.05;  // Fade out over 0.2 seconds (20 frames)
+                    return powerup.opacity > 0;
+                }
+                
+                // Check collision with player if not fading
+                if (!powerup.fadeOut) {
+                    const playerHitbox = {
+                        x: this.playerX - 20,
+                        y: this.playerY,
+                        width: 40,
+                        height: 20
+                    };
+                    
+                    const powerupHitbox = {
+                        x: powerup.x - 10,
+                        y: powerup.y - 10,
+                        width: 20,
+                        height: 20
+                    };
+                    
+                    if (this.checkCollision(playerHitbox, powerupHitbox)) {
+                        // Collect powerup
+                        powerup.fadeOut = true;
+                        this.powerupSound.currentTime = 0;
+                        this.powerupSound.play();
+                        
+                        // Add time bonus by subtracting from start time
+                        this.startTime -= 20000;  // Changed from += to -= to add 20 seconds
+                        
+                        // Start timer flash
+                        this.timerFlash = {
+                            active: true,
+                            startTime: Date.now(),
+                            duration: 1000
+                        };
+                        
+                        // Create floating text
+                        this.floatingTexts.push(
+                            this.createFloatingText(this.playerX, this.playerY - 40, "+20")
+                        );
+                    }
+                }
+                
+                return powerup.y > -20;  // Keep if still on screen
+            });
+            
+            // Spawn new powerups occasionally
+            if (Math.random() < 0.002) {  // 0.2% chance per frame
+                this.powerups.push(this.createPowerup());
+            }
+            
+            // Update floating texts
+            this.floatingTexts = this.floatingTexts.filter(text => {
+                const elapsed = Date.now() - text.startTime;
+                return elapsed < text.duration;
+            });
         }
+
+        // Update super snowflakes in gameplay mode
+        this.superSnowflakes.forEach(snow => {
+            if (this.easyMode) {
+                snow.x += horizontalSpeed * snow.speed;
+                snow.y += verticalSpeed * snow.speed / verticalSpeedMultiplier;
+            } else {
+                snow.x += (this.direction === 'left' ? snow.speed : -snow.speed);
+                snow.y -= snow.speed;
+            }
+            
+            snow.rotation += snow.rotationSpeed;
+            
+            // Reset position when off screen
+            if (snow.y < -50) {
+                snow.y = this.canvas.height + 50;
+                snow.x = Math.random() * this.canvas.width;
+            } else if (snow.y > this.canvas.height + 50) {
+                snow.y = -50;
+                snow.x = Math.random() * this.canvas.width;
+            }
+            if (snow.x < -50) {
+                snow.x = this.canvas.width + 50;
+            } else if (snow.x > this.canvas.width + 50) {
+                snow.x = -50;
+            }
+        });
     }
     
     checkCollision(rect1, rect2) {
@@ -1208,7 +1357,98 @@ class Game {
                 this.ctx.fillRect(-conf.size/2, -conf.size/2, conf.size, conf.size * 2);
                 this.ctx.restore();
             });
+
+            // Draw player with flash effect
+            this.ctx.save();
+            this.ctx.translate(this.playerX, this.playerY);
+            
+            // Add red flash if recently hit
+            if (this.playerFlashTime) {
+                const flashProgress = (Date.now() - this.playerFlashTime) / 200;  // 200ms flash
+                if (flashProgress < 1) {
+                    // Use globalCompositeOperation to only tint non-transparent pixels
+                    this.ctx.globalCompositeOperation = 'source-atop';
+                    this.ctx.fillStyle = `rgba(255, 0, 0, ${1 - flashProgress})`;
+                    this.ctx.drawImage(this.skierImg, -20, -20, 40, 40);  // Draw player first
+                    this.ctx.fillRect(-20, -20, 40, 40);  // Then overlay the red tint
+                    this.ctx.globalCompositeOperation = 'source-over';  // Reset composite operation
+                } else {
+                    this.playerFlashTime = null;
+                }
+            }
+            
+            // ... rest of player drawing code ...
+            this.ctx.restore();
+            
+            // Draw collision particles
+            this.collisionParticles.forEach(particle => {
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${particle.life})`;
+                this.ctx.beginPath();
+                this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+            
+            // Draw powerups
+            this.powerups.forEach(powerup => {
+                this.ctx.save();
+                this.ctx.globalAlpha = powerup.opacity;
+                this.ctx.drawImage(
+                    this.powerupImg,
+                    powerup.x - 10,
+                    powerup.y - 10,
+                    20,
+                    20
+                );
+                this.ctx.restore();
+            });
+            
+            // Draw floating texts
+            this.floatingTexts.forEach(text => {
+                const elapsed = Date.now() - text.startTime;
+                const progress = elapsed / text.duration;
+                
+                // Calculate position with wave movement
+                const waveX = text.baseX + Math.sin(progress * Math.PI * 4) * 20;
+                const y = text.y - (progress * 100);  // Float upward
+                
+                this.ctx.save();
+                this.ctx.fillStyle = `rgba(0, 255, 0, ${1 - progress})`;
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(text.text, waveX, y);
+                this.ctx.restore();
+            });
+            
+            // Apply timer flash
+            if (this.timerFlash.active) {
+                const elapsed = Date.now() - this.timerFlash.startTime;
+                if (elapsed < this.timerFlash.duration) {
+                    const progress = elapsed / this.timerFlash.duration;
+                    const alpha = Math.sin(progress * Math.PI);
+                    this.timerText.style.color = `rgba(0, 255, 0, ${alpha})`;
+                } else {
+                    this.timerFlash.active = false;
+                    this.timerText.style.color = '#001933';  // Reset to original color
+                }
+            }
         }
+
+        // Draw super snowflakes (always active)
+        this.superSnowflakes.forEach(snow => {
+            this.ctx.save();
+            this.ctx.translate(snow.x, snow.y);
+            this.ctx.rotate(snow.rotation);
+            this.ctx.globalAlpha = 0.1;  // 10% opacity
+            this.ctx.drawImage(
+                this.snowflakeImg,
+                -snow.size/2,
+                -snow.size/2,
+                snow.size,
+                snow.size
+            );
+            this.ctx.restore();
+        });
     }
     
     restart() {
@@ -1280,6 +1520,13 @@ class Game {
         
         // Reset snowflakes
         this.snowflakes = Array(100).fill().map(() => this.createSnowflake());
+
+        // Clear collision particles
+        this.collisionParticles = [];
+        this.playerFlashTime = null;
+
+        // Reset super snowflakes
+        this.superSnowflakes = Array(4).fill().map(() => this.createSuperSnowflake());
     }
     
     gameLoop() {
@@ -1397,11 +1644,68 @@ class Game {
         };
     }
 
+    // Add method to create collision effect
+    createCollisionEffect(x, y) {
+        // Create ring of particles with slower speed
+        const particleCount = 20;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const speed = (Math.random() * 2 + 3) * 0.1;  // 10% of original speed (0.3-0.5)
+            this.collisionParticles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,  // Start at full opacity
+                size: Math.random() * 3 + 2  // Random size between 2-5
+            });
+        }
+        
+        // Start screen shake
+        this.screenShake = {
+            active: true,
+            startTime: Date.now(),
+            duration: 400,
+            intensity: 15
+        };
+    }
+
     // Clean up interval when game is destroyed
     destroy() {
         if (this.skiingSoundCheckInterval) {
             clearInterval(this.skiingSoundCheckInterval);
         }
+    }
+
+    createPowerup() {
+        return {
+            x: Math.random() * this.canvas.width,
+            y: this.canvas.height + 25,  // Start below screen
+            opacity: 1,
+            fadeOut: false
+        };
+    }
+    
+    createFloatingText(x, y, text) {
+        return {
+            x: x,
+            y: y,
+            text: text,
+            startTime: Date.now(),
+            duration: 2000,  // 2 seconds total animation
+            baseX: x  // Store initial X for wave movement
+        };
+    }
+
+    createSuperSnowflake(forceTop = false) {
+        return {
+            x: Math.random() * this.canvas.width,
+            y: forceTop ? -50 : Math.random() * this.canvas.height,
+            size: Math.random() * 20 + 40,  // Size range: 40-60 pixels
+            speed: Math.random() * 4 + 8,   // Speed range 8-12 (super fast)
+            rotation: Math.random() * Math.PI * 2,  // Random initial rotation
+            rotationSpeed: (Math.random() - 0.5) * 0.02  // Slow rotation
+        };
     }
 }
 
