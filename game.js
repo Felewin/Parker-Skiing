@@ -702,17 +702,18 @@ class Game {
             
             if (this.easyMode) {
                 // Easy mode movement
-                const speed = 1;
+                const BASE_SPEED = 1.44;
                 
                 // Calculate speeds based on active keys
-                if (this.activeKeys.has('ArrowLeft')) horizontalSpeed += speed;
-                if (this.activeKeys.has('ArrowRight')) horizontalSpeed -= speed;
-                if (this.activeKeys.has('ArrowUp')) verticalSpeed += speed;
-                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= speed;
+                if (this.activeKeys.has('ArrowLeft')) horizontalSpeed += BASE_SPEED;
+                if (this.activeKeys.has('ArrowRight')) horizontalSpeed -= BASE_SPEED;
+                if (this.activeKeys.has('ArrowUp')) verticalSpeed += BASE_SPEED;
+                if (this.activeKeys.has('ArrowDown')) verticalSpeed -= BASE_SPEED;
             } else {
                 // Normal mode movement
-                horizontalSpeed = this.direction === 'left' ? 1 : -1;
-                verticalSpeed = -1;  // Removed multiplier
+                const BASE_SPEED = 1.5;
+                horizontalSpeed = this.direction === 'left' ? BASE_SPEED : -BASE_SPEED;
+                verticalSpeed = -BASE_SPEED;  // Using base speed here too
             }
             
             // Move trees with adjusted vertical speed
