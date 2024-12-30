@@ -602,8 +602,8 @@ class Game {
         // Get current tree multiplier based on time
         const multiplier = this.getTreeMultiplier();
         
-        // Scale base tree count with screen width
-        const widthRatio = this.canvas.width / 800;  // Use 800px as reference width
+        // Scale base tree count with screen width, but less aggressively
+        const widthRatio = Math.sqrt(this.canvas.width / 800);  // Use square root for gentler scaling
         const baseTreeCount = Math.ceil(this.baseTreeCount * widthRatio);
         const treeCount = baseTreeCount * multiplier * 4;  // Always use 4x multiplier
         
@@ -626,6 +626,12 @@ class Game {
         if (this.currentScore >= 120) return 3;      // After 2 minutes: 60 trees
         if (this.currentScore >= 60) return 2;       // After 1 minute: 40 trees
         return 1;                                    // Default: 20 trees
+    }
+    
+    // Add method to calculate speed multiplier based on time
+    getSpeedMultiplier() {
+        const minutesPassed = this.currentScore / 250;  // How many 250-second intervals have passed
+        return 1 + Math.floor(minutesPassed);  // Start at 1, add 1 for each 3-minute interval
     }
     
     update() {
@@ -700,10 +706,10 @@ class Game {
             let horizontalSpeed = 0;
             let verticalSpeed = 0;
             
+            const BASE_SPEED = this.getSpeedMultiplier();
+            
             if (this.easyMode) {
                 // Easy mode movement
-                const BASE_SPEED = 1.44;
-                
                 // Calculate speeds based on active keys
                 if (this.activeKeys.has('ArrowLeft')) horizontalSpeed += BASE_SPEED;
                 if (this.activeKeys.has('ArrowRight')) horizontalSpeed -= BASE_SPEED;
@@ -711,7 +717,6 @@ class Game {
                 if (this.activeKeys.has('ArrowDown')) verticalSpeed -= BASE_SPEED;
             } else {
                 // Normal mode movement
-                const BASE_SPEED = 1.5;
                 horizontalSpeed = this.direction === 'left' ? BASE_SPEED : -BASE_SPEED;
                 verticalSpeed = -BASE_SPEED;  // Using base speed here too
             }
