@@ -635,7 +635,7 @@ class Game {
     }
     
     // Add method to calculate speed multiplier based on time
-    getSpeedMultiplier() {
+    getSpeedMultiplier() {                                          
         const minutesPassed = this.currentScore / 180;  // How many 3-minute intervals have passed
         return 1 + minutesPassed;  // Start at 1, add progress continuously
     }
@@ -1350,7 +1350,7 @@ class Game {
                     
                     // Create gradient text
                     this.ctx.save();
-                    this.ctx.translate(this.canvas.width/2, this.canvas.height/2 + 120);
+                    this.ctx.translate(this.canvas.width/2, this.canvas.height - 50);  // Changed from canvas.height/2 + 120
                     this.ctx.scale(finalScale, finalScale);
                     
                     // Create gradient
