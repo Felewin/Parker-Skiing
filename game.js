@@ -46,19 +46,40 @@ class Game {
             new Audio('Skiing.mp3'),
             new Audio('Skiing.mp3')
         ];
-        this.skiingSounds.forEach(sound => {
-            sound.volume = 0.25;  // Start at full volume
+        this.skiingSounds.forEach((sound, index) => {
+            sound.volume = 0.25;
+            
+            // Add error handling
+            sound.addEventListener('error', (e) => {
+                console.error(`Skiing sound ${index} error:`, e);
+                // Only try to recover if we're actually playing
+                if (!this.isIntroScreen && !this.gameOver) {
+                    sound.currentTime = 0;
+                    sound.load();
+                }
+            });
+
             sound.addEventListener('timeupdate', () => {
+                // Skip if not actually playing or if game is over/intro
+                if (sound.paused || sound.currentTime === 0 || this.isIntroScreen || this.gameOver) {
+                    return;
+                }
+
                 // Start crossfade when 1 second from the end
                 if (sound.currentTime > sound.duration - 1) {
                     const otherSound = this.skiingSounds.find(s => s !== sound);
                     
-                    // Start the other sound if it's not already playing
-                    if (otherSound.paused) {
+                    // Start the other sound if it's not already playing and we're still in game
+                    if (otherSound.paused && !this.isIntroScreen && !this.gameOver) {
                         otherSound.currentTime = 0;
-                        otherSound.volume = 0.25;  // Start at full volume
+                        otherSound.volume = 0.25;
                         otherSound.play().catch(e => {
                             console.error('Error playing skiing sound:', e);
+                            // Only try to restart current sound if still in game
+                            if (!this.isIntroScreen && !this.gameOver) {
+                                sound.currentTime = 0;
+                                sound.play().catch(console.error);
+                            }
                         });
                     }
                 }
@@ -90,21 +111,9 @@ class Game {
         this.restartSound = new Audio('Juicy Wooden Click.wav');
         this.restartSound.volume = 1.0;  // Changed from 0.25 to 1.0
 
-        // Add error handling and logging
-        this.snowstormSound.addEventListener('error', (e) => {
-            console.error('Error loading snowstorm sound:', e);
-        });
-
-        this.snowstormSound.addEventListener('canplaythrough', () => {
-            console.log('Snowstorm sound loaded successfully');
-            this.snowstormSound.play().catch(e => {
-                console.error('Error playing snowstorm sound:', e);
-            });
-        });
-
         // Setup crowd cheering sounds
-        this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf.wav');
-        this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf.wav');
+        this.cheerSound1 = new Audio('Crowd Cheering Exterior, Big Surge, Rose Bowl Stadium, Applause _5.1 LCRLsRsLf_01.mp3');
+        this.cheerSound2 = new Audio('Crowd Cheering Interior, Female Crowd, Short Swell 24, Staples Arena Los Angeles  _5.1 LCRLsRsLf_01.mp3');
         this.cheerSound1.volume = 0.25;
         this.cheerSound2.volume = 0.25;
 
@@ -219,6 +228,20 @@ class Game {
                 this.showLoadingText = false;
                 this.showIntroText = false;  // Don't show play text yet
                 this.introMusic.play();
+                
+                // Start snowstorm with fade in
+                this.snowstormSound.volume = 0;  // Start silent
+                this.snowstormSound.play();
+                
+                // Fade in over 1 second
+                const fadeIn = () => {
+                    if (this.snowstormSound.volume < 0.25) {
+                        this.snowstormSound.volume = Math.min(0.25, this.snowstormSound.volume + 0.01);
+                        setTimeout(fadeIn, 40);  // 40ms * 25 steps = 1000ms (1 second)
+                    }
+                };
+                fadeIn();
+                
                 this.loadingStartTime = Date.now();
                 
                 // Set timer to show "Touch to play" after loading completes
@@ -276,6 +299,25 @@ class Game {
             }
             this.lastVisibleTime = Date.now();
         });
+
+        // Add skiing sound health check interval
+        this.skiingSoundCheckInterval = setInterval(() => {
+            // Only check during active gameplay
+            if (!this.isIntroScreen && !this.gameOver) {
+                // Check if any skiing sound is playing
+                const anySkiingSoundPlaying = this.skiingSounds.some(sound => 
+                    !sound.paused && sound.currentTime > 0 && !sound.ended
+                );
+                
+                // If no skiing sound is playing, restart first sound
+                if (!anySkiingSoundPlaying) {
+                    console.log('Recovering from skiing sound silence');
+                    this.skiingSounds[0].currentTime = 0;
+                    this.skiingSounds[0].volume = 0.25;
+                    this.skiingSounds[0].play().catch(console.error);
+                }
+            }
+        }, 3000);  // Check every 3 seconds
     }
 
     setupIntroEventListeners() {
@@ -422,9 +464,6 @@ class Game {
             
             container.appendChild(wordDiv);
         });
-        
-        // Add debug log
-        console.log('Birthday text setup complete:', container.innerHTML);
     }
     
     setupEventListeners() {
@@ -1265,6 +1304,13 @@ class Game {
             color: this.confettiColors[Math.floor(Math.random() * this.confettiColors.length)],
             scale: Math.random() * 0.5 + 0.5
         };
+    }
+
+    // Clean up interval when game is destroyed
+    destroy() {
+        if (this.skiingSoundCheckInterval) {
+            clearInterval(this.skiingSoundCheckInterval);
+        }
     }
 }
 
