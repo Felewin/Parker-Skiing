@@ -1147,7 +1147,7 @@ class Game {
             this.ctx.font = '16px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'bottom';
-            this.ctx.fillText('v1.1', 10, this.canvas.height - 10);  // Changed from v1.0 to v1.1
+            this.ctx.fillText('v1.2', 10, this.canvas.height - 10);  // Changed from v1.1 to v1.2
             this.ctx.restore();
         } else {
             // Draw trees with conditional fade effect
@@ -1207,6 +1207,8 @@ class Game {
                 this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
+                // Comment out collision box visualization
+                /*
                 // Find the tree that caused the collision
                 const collidedTree = this.trees.find(tree => {
                     const treeHitbox = {
@@ -1247,6 +1249,7 @@ class Game {
                     40 * scale,
                     20 * scale
                 );
+                */
                 
                 // Calculate heartbeat scale using sine wave
                 const pulseSpeed = 1.5; // Speed of pulse
