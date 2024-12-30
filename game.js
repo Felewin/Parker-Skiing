@@ -18,6 +18,11 @@ class Game {
         // Add extra-large snowflake configuration for intro
         this.extraLargeSnowflakes = Array(8).fill().map(() => this.createExtraLargeSnowflake());
         
+        // Add super large snowflake configuration
+        this.superSnowflakes = Array(4).fill().map(() => this.createSuperSnowflake());
+        this.superSnowflakeImg = new Image();
+        this.superSnowflakeImg.src = 'snowflake.png';
+        
         // Add star configuration (needed for intro)
         this.stars = Array(50).fill().map(() => ({
             x: Math.random() * window.innerWidth,
@@ -599,6 +604,19 @@ class Game {
                     snow.x = Math.random() * this.canvas.width;
                 }
             });
+            
+            // Update super snowflakes for intro screen
+            this.superSnowflakes.forEach(snow => {
+                snow.y += snow.speed;  // Only move down in intro
+                snow.rotation += snow.rotationSpeed;
+                
+                // Reset position when off screen
+                if (snow.y > this.canvas.height + 50) {
+                    snow.y = -50;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+            });
+            
         } else {
             if (this.gameOver) {
                 // Update collision particles even during game over
@@ -871,6 +889,33 @@ class Game {
             this.floatingTexts = this.floatingTexts.filter(text => {
                 const elapsed = Date.now() - text.startTime;
                 return elapsed < text.duration;
+            });
+            
+            // Update super snowflakes for gameplay
+            this.superSnowflakes.forEach(snow => {
+                if (this.easyMode) {
+                    snow.x += horizontalSpeed * snow.speed;
+                    snow.y += verticalSpeed * snow.speed / verticalSpeedMultiplier;
+                } else {
+                    snow.x += (this.direction === 'left' ? snow.speed : -snow.speed);
+                    snow.y -= snow.speed;
+                }
+                
+                snow.rotation += snow.rotationSpeed;
+                
+                // Reset position when off screen
+                if (snow.y < -50) {
+                    snow.y = this.canvas.height + 50;
+                    snow.x = Math.random() * this.canvas.width;
+                } else if (snow.y > this.canvas.height + 50) {
+                    snow.y = -50;
+                    snow.x = Math.random() * this.canvas.width;
+                }
+                if (snow.x < -50) {
+                    snow.x = this.canvas.width + 50;
+                } else if (snow.x > this.canvas.width + 50) {
+                    snow.x = -50;
+                }
             });
         }
     }
@@ -1389,6 +1434,22 @@ class Game {
                 }
             }
         }
+
+        // Draw super snowflakes (always active)
+        this.superSnowflakes.forEach(snow => {
+            this.ctx.save();
+            this.ctx.translate(snow.x, snow.y);
+            this.ctx.rotate(snow.rotation);
+            this.ctx.globalAlpha = 0.1;  // 10% opacity
+            this.ctx.drawImage(
+                this.superSnowflakeImg,
+                -snow.size/2,
+                -snow.size/2,
+                snow.size,
+                snow.size
+            );
+            this.ctx.restore();
+        });
     }
     
     restart() {
@@ -1631,6 +1692,18 @@ class Game {
             startTime: Date.now(),
             duration: 2000,  // 2 seconds total animation
             baseX: x  // Store initial X for wave movement
+        };
+    }
+
+    createSuperSnowflake(forceTop = false) {
+        // Super large image snowflakes - fastest of all
+        return {
+            x: Math.random() * this.canvas.width,
+            y: forceTop ? -150 : Math.random() * this.canvas.height,  // Increased offset for larger size
+            size: Math.random() * 60 + 120,    // Changed: Size range: 120-180 pixels (3x bigger)
+            speed: Math.random() * 6 + 12,     // Changed: Speed range 12-18 (1.5x faster)
+            rotation: Math.random() * Math.PI * 2,  // Random initial rotation
+            rotationSpeed: (Math.random() - 0.5) * 0.02  // Keep same rotation speed
         };
     }
 }
