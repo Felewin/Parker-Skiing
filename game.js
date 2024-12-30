@@ -411,9 +411,9 @@ class Game {
     setupEventListeners() {
         // Handle keyboard input immediately
         document.addEventListener('keydown', (e) => {
-            if (this.gameOver && this.canRestart) {
-                this.restart();
-                return;
+            if (this.gameOver) {
+                if (this.canRestart) this.restart();
+                return;  // Ignore all other input during game over
             }
 
             // Track key for easy mode movement
@@ -423,7 +423,7 @@ class Game {
             if (!this.easyMode) {
                 if (e.key === 'ArrowLeft') {
                     this.direction = 'left';
-                    e.preventDefault();  // Prevent default scrolling
+                    e.preventDefault();
                 }
                 if (e.key === 'ArrowRight') {
                     this.direction = 'right';
@@ -447,13 +447,13 @@ class Game {
         const handleDirectionInput = (e) => {
             if (this.gameOver) {
                 if (this.canRestart) this.restart();
-                return;
+                return;  // Ignore direction changes during game over
             }
             
             // Get X coordinate and immediately update direction
             const x = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
             this.direction = x < window.innerWidth / 2 ? 'left' : 'right';
-            e.preventDefault();  // Prevent default behavior
+            e.preventDefault();
         };
         
         document.addEventListener('touchstart', handleDirectionInput, { passive: false });
