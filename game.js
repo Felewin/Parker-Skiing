@@ -346,11 +346,6 @@ class Game {
             startTime: 0,
             duration: 1000  // 1 second flash
         };
-
-        // Add super large snowflake configuration
-        this.superSnowflakes = Array(4).fill().map(() => this.createSuperSnowflake());
-        this.snowflakeImg = new Image();
-        this.snowflakeImg.src = 'snowflake.png';
     }
 
     setupIntroEventListeners() {
@@ -577,12 +572,6 @@ class Game {
     }
     
     update() {
-        // Define these at the top of update method
-        let horizontalSpeed = 0;
-        let verticalSpeed = 0;
-        const isPortrait = window.innerHeight > window.innerWidth;
-        const verticalSpeedMultiplier = isPortrait ? 2 : 1;
-
         if (this.isIntroScreen) {
             // Update regular snowflakes
             this.snowflakes.forEach(snow => {
@@ -607,19 +596,6 @@ class Game {
                 snow.y += snow.speed;
                 if (snow.y > this.canvas.height + 30) {
                     snow.y = -30;
-                    snow.x = Math.random() * this.canvas.width;
-                }
-            });
-            
-            // Update super snowflakes in intro mode
-            this.superSnowflakes.forEach(snow => {
-                // In intro screen, just fall straight down
-                snow.y += snow.speed;
-                snow.rotation += snow.rotationSpeed;
-                
-                // Reset position when off screen
-                if (snow.y > this.canvas.height + 50) {
-                    snow.y = -50;
                     snow.x = Math.random() * this.canvas.width;
                 }
             });
@@ -651,6 +627,13 @@ class Game {
                 this.startAnimation.scaleComplete = true;
             }
             
+            let horizontalSpeed = 0;
+            let verticalSpeed = 0;
+            
+            // Check if screen is in portrait mode
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const verticalSpeedMultiplier = isPortrait ? 2 : 1;  // Double speed in portrait
+
             if (this.easyMode) {
                 // Easy mode movement
                 const speed = 1;
@@ -859,8 +842,8 @@ class Game {
                         this.powerupSound.currentTime = 0;
                         this.powerupSound.play();
                         
-                        // Add time bonus by subtracting from start time
-                        this.startTime -= 20000;  // Changed from += to -= to add 20 seconds
+                        // Add time bonus
+                        this.startTime += 20000;  // Add 20 seconds
                         
                         // Start timer flash
                         this.timerFlash = {
@@ -890,33 +873,6 @@ class Game {
                 return elapsed < text.duration;
             });
         }
-
-        // Update super snowflakes in gameplay mode
-        this.superSnowflakes.forEach(snow => {
-            if (this.easyMode) {
-                snow.x += horizontalSpeed * snow.speed;
-                snow.y += verticalSpeed * snow.speed / verticalSpeedMultiplier;
-            } else {
-                snow.x += (this.direction === 'left' ? snow.speed : -snow.speed);
-                snow.y -= snow.speed;
-            }
-            
-            snow.rotation += snow.rotationSpeed;
-            
-            // Reset position when off screen
-            if (snow.y < -50) {
-                snow.y = this.canvas.height + 50;
-                snow.x = Math.random() * this.canvas.width;
-            } else if (snow.y > this.canvas.height + 50) {
-                snow.y = -50;
-                snow.x = Math.random() * this.canvas.width;
-            }
-            if (snow.x < -50) {
-                snow.x = this.canvas.width + 50;
-            } else if (snow.x > this.canvas.width + 50) {
-                snow.x = -50;
-            }
-        });
     }
     
     checkCollision(rect1, rect2) {
@@ -1433,22 +1389,6 @@ class Game {
                 }
             }
         }
-
-        // Draw super snowflakes (always active)
-        this.superSnowflakes.forEach(snow => {
-            this.ctx.save();
-            this.ctx.translate(snow.x, snow.y);
-            this.ctx.rotate(snow.rotation);
-            this.ctx.globalAlpha = 0.1;  // 10% opacity
-            this.ctx.drawImage(
-                this.snowflakeImg,
-                -snow.size/2,
-                -snow.size/2,
-                snow.size,
-                snow.size
-            );
-            this.ctx.restore();
-        });
     }
     
     restart() {
@@ -1524,9 +1464,6 @@ class Game {
         // Clear collision particles
         this.collisionParticles = [];
         this.playerFlashTime = null;
-
-        // Reset super snowflakes
-        this.superSnowflakes = Array(4).fill().map(() => this.createSuperSnowflake());
     }
     
     gameLoop() {
@@ -1694,17 +1631,6 @@ class Game {
             startTime: Date.now(),
             duration: 2000,  // 2 seconds total animation
             baseX: x  // Store initial X for wave movement
-        };
-    }
-
-    createSuperSnowflake(forceTop = false) {
-        return {
-            x: Math.random() * this.canvas.width,
-            y: forceTop ? -50 : Math.random() * this.canvas.height,
-            size: Math.random() * 20 + 40,  // Size range: 40-60 pixels
-            speed: Math.random() * 4 + 8,   // Speed range 8-12 (super fast)
-            rotation: Math.random() * Math.PI * 2,  // Random initial rotation
-            rotationSpeed: (Math.random() - 0.5) * 0.02  // Slow rotation
         };
     }
 }
