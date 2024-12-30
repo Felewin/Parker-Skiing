@@ -9,6 +9,14 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.setCanvasSize();
         
+        // Add screen shake configuration
+        this.screenShake = {
+            active: false,
+            startTime: 0,
+            duration: 400,  // 400ms shake
+            intensity: 15   // Maximum shake offset in pixels
+        };
+        
         // Add snow configuration (needed from start)
         this.snowflakes = Array(100).fill().map(() => this.createSnowflake());
         
@@ -326,14 +334,6 @@ class Game {
 
         // Add collision particles array
         this.collisionParticles = [];
-
-        // Add screen shake configuration
-        this.screenShake = {
-            active: false,
-            startTime: 0,
-            duration: 400,  // 400ms shake
-            intensity: 15   // Maximum shake offset in pixels
-        };
 
         // Add powerup configuration
         this.powerups = [];
@@ -860,8 +860,8 @@ class Game {
                         this.powerupSound.currentTime = 0;
                         this.powerupSound.play();
                         
-                        // Add time bonus
-                        this.startTime += 20000;  // Add 20 seconds
+                        // Subtract from start time to add 20 seconds to score
+                        this.startTime -= 20000;  // Changed from += to -=
                         
                         // Start timer flash
                         this.timerFlash = {
@@ -933,6 +933,21 @@ class Game {
     
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Apply screen shake at the very start of draw method
+        this.ctx.save();
+        if (this.screenShake.active) {
+            const elapsed = Date.now() - this.screenShake.startTime;
+            if (elapsed < this.screenShake.duration) {
+                const progress = elapsed / this.screenShake.duration;
+                const intensity = this.screenShake.intensity * (1 - progress);  // Fade out shake
+                const shakeX = (Math.random() - 0.5) * intensity * 2;
+                const shakeY = (Math.random() - 0.5) * intensity * 2;
+                this.ctx.translate(shakeX, shakeY);
+            } else {
+                this.screenShake.active = false;
+            }
+        }
 
         if (this.isIntroScreen) {
             // Draw intro screen
@@ -1450,6 +1465,8 @@ class Game {
             );
             this.ctx.restore();
         });
+
+        this.ctx.restore();  // Restore at the very end of draw method
     }
     
     restart() {
